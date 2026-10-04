@@ -36,7 +36,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
                     ns.Search.Refresh()
                 end
                 if ns.MailContacts then
-                    ns.MailContacts.Refresh()
+                    ns.MailContacts.Invalidate()
                 end
             end)
             ns.Search.Refresh()

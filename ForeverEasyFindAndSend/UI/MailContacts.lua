@@ -22,6 +22,9 @@ local rows = {}
 local visibleResults = {}
 local guildOnlineByRecord = {}
 local searchGeneration = 0
+local resultsDirty = true
+local lastQuery
+local lastTab
 
 local function SetRecipient(record)
     local editBox = _G.SendMailNameEditBox
@@ -407,6 +410,11 @@ function MailContacts.IsInstalled()
     return installed
 end
 
+function MailContacts.Invalidate()
+    resultsDirty = true
+    MailContacts.Refresh()
+end
+
 function MailContacts.UpdateWhoState()
     if not installed or not onlineSearchButton or not whoStatusText or not ns.Who then
         return
@@ -425,7 +433,12 @@ function MailContacts.Refresh()
 
     local query = searchBox:GetText() or ""
     MailContacts.UpdateWhoState()
-    visibleResults = ns.Search.Filter(GetRecordsForActiveTab(), query)
+    if resultsDirty or query ~= lastQuery or activeTab ~= lastTab then
+        visibleResults = ns.Search.Filter(GetRecordsForActiveTab(), query)
+        resultsDirty = false
+        lastQuery = query
+        lastTab = activeTab
+    end
     local offset = FauxScrollFrame_GetOffset(scrollFrame)
 
     FauxScrollFrame_Update(scrollFrame, #visibleResults, VISIBLE_ROWS, ROW_HEIGHT)

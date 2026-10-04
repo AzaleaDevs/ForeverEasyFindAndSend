@@ -19,7 +19,7 @@ The project follows [Semantic Versioning](https://semver.org/).
 - Precompute normalized character search values in memory instead of rebuilding them for every record on every keypress.
 - Maintain GUID and exact-action-name database indexes incrementally.
 - Batch login, friend, group, and guild imports so search and UI consumers refresh once per synchronization event.
-- Debounce non-empty contact searches by 75 ms and skip unchanged visible-row rendering work.
+- Debounce non-empty contact searches by 75 ms, cache filtered results while scrolling, and skip unchanged visible-row rendering work.
 
 ### Fixed
 
