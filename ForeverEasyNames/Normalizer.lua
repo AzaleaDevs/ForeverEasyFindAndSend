@@ -41,6 +41,7 @@ local function Fold(value)
     end
 
     folded = string.gsub(folded, "%s+", " ")
+    folded = string.gsub(folded, "’", "'")
     folded = string.gsub(folded, "^%s+", "")
     folded = string.gsub(folded, "%s+$", "")
 
@@ -48,13 +49,13 @@ local function Fold(value)
 end
 
 local function Compact(value)
-    return string.gsub(value, "[%s%-'’]", "")
+    return string.gsub(value, "[%s%-']", "")
 end
 
 local function Tokenize(value)
     local tokens = {}
 
-    for token in string.gmatch(value, "[^%s%-'’]+") do
+    for token in string.gmatch(value, "[^%s%-']+") do
         tokens[#tokens + 1] = token
     end
 
@@ -72,4 +73,3 @@ function Normalizer.Normalize(value)
         tokens = Tokenize(folded),
     }
 end
-
