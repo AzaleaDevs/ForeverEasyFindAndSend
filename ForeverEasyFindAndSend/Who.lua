@@ -11,6 +11,7 @@ local cooldownUntil = 0
 local requestGeneration = 0
 local lastQuery = ""
 local statusText = ""
+local lastError
 
 local function Now()
     return type(GetTime) == "function" and GetTime() or 0
@@ -123,9 +124,11 @@ function Who.Request(query)
     if not succeeded then
         pending = false
         statusText = "Online search could not be started."
+        lastError = tostring(errorMessage)
         NotifyUI()
         return false, errorMessage
     end
+    lastError = nil
 
     ScheduleStateUpdate(MIN_REQUEST_INTERVAL)
     if C_Timer and type(C_Timer.After) == "function" then
@@ -181,19 +184,20 @@ function Who.OnEvent(event)
     end)
     if not succeeded then
         statusText = "Online results could not be processed."
+        lastError = tostring(errorMessage)
     elseif imported == 0 then
+        lastError = nil
         statusText = "No online results found."
     elseif totalNumWhos > numWhos then
+        lastError = nil
         statusText = string.format("Online search: %d of %d results shown.", imported, totalNumWhos)
     else
+        lastError = nil
         statusText = string.format("Online search: %d result(s) found.", imported)
     end
 
     ns.Database.RequestRefresh(false)
     ns.Database.EndBatch()
-    if not succeeded then
-        error(errorMessage, 0)
-    end
 end
 
 function Who.PrintDebug()
@@ -204,4 +208,7 @@ function Who.PrintDebug()
         lastQuery,
         math.max(0, cooldownUntil - Now())
     ))
+    if lastError then
+        ns.Print("debug: last WHO error=" .. lastError)
+    end
 end
