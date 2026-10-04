@@ -7,6 +7,7 @@ local PANEL_WIDTH = 390
 local PANEL_HEIGHT = 420
 local ROW_HEIGHT = 52
 local VISIBLE_ROWS = 6
+local SEARCH_DEBOUNCE_SECONDS = 0.075
 
 local installed = false
 local activeTab = "GENERAL"
@@ -18,6 +19,7 @@ local emptyText
 local rows = {}
 local visibleResults = {}
 local guildOnlineByRecord = {}
+local searchGeneration = 0
 
 local function SetRecipient(record)
     local editBox = _G.SendMailNameEditBox
@@ -119,8 +121,27 @@ end
 local function UpdateRow(row, result)
     local record = result.record
     row.record = record
+    local guildStatus = activeTab == "GUILD" and GetGuildStatus(record) or nil
+    local renderKey = table.concat({
+        activeTab,
+        tostring(record.actionName or ""),
+        tostring(record.displayName or ""),
+        tostring(record.level or ""),
+        tostring(record.race or ""),
+        tostring(record.class or ""),
+        tostring(record.classFile or ""),
+        tostring(record.favorite == true),
+        tostring(guildStatus or ""),
+    }, "\031")
+
+    if row.renderKey == renderKey then
+        row:Show()
+        return
+    end
+
+    row.renderKey = renderKey
     row.name:SetText(record.displayName or record.actionName)
-    row.metadata:SetText(ns.Formatter.GetMetadata(record, activeTab == "GUILD" and GetGuildStatus(record) or nil))
+    row.metadata:SetText(ns.Formatter.GetMetadata(record, guildStatus))
     row.favoriteButton.icon:SetAtlas(record.favorite and "friends-icon-favorites" or "friends-icon-favorites-dis")
     row.favoriteButton:SetEnabled(not record.isDevelopmentFixture)
     SetClassIcon(row, record)
@@ -178,9 +199,8 @@ local function CreateRow(index)
     row.favoriteButton.icon:SetPoint("CENTER")
     row.favoriteButton:SetHighlightTexture("Interface/Buttons/ButtonHilight-Square", "ADD")
     row.favoriteButton:SetScript("OnClick", function()
-        if row.record and ns.Database.SetFavorite(row.record, not row.record.favorite) then
-            ns.Search.Refresh()
-            MailContacts.Refresh()
+        if row.record then
+            ns.Database.SetFavorite(row.record, not row.record.favorite)
         end
     end)
     row.favoriteButton:SetScript("OnEnter", function(self)
@@ -198,6 +218,24 @@ local function CreateRow(index)
     end)
 
     rows[index] = row
+end
+
+local function ScheduleSearchRefresh()
+    searchGeneration = searchGeneration + 1
+    local generation = searchGeneration
+    local query = searchBox:GetText() or ""
+
+    ResetScroll()
+    if query == "" or not C_Timer or type(C_Timer.After) ~= "function" then
+        MailContacts.Refresh()
+        return
+    end
+
+    C_Timer.After(SEARCH_DEBOUNCE_SECONDS, function()
+        if generation == searchGeneration and searchBox and (searchBox:GetText() or "") == query then
+            MailContacts.Refresh()
+        end
+    end)
 end
 
 local function SetActiveTab(tab)
@@ -250,10 +288,7 @@ local function CreatePanel()
     if searchBox.Instructions then
         searchBox.Instructions:SetText(SEARCH or "Search")
     end
-    searchBox:HookScript("OnTextChanged", function()
-        ResetScroll()
-        MailContacts.Refresh()
-    end)
+    searchBox:HookScript("OnTextChanged", ScheduleSearchRefresh)
     searchBox:SetScript("OnEscapePressed", function(self)
         self:ClearFocus()
     end)
@@ -359,6 +394,7 @@ function MailContacts.Refresh()
             UpdateRow(rows[rowIndex], result)
         else
             rows[rowIndex].record = nil
+            rows[rowIndex].renderKey = nil
             rows[rowIndex]:Hide()
         end
     end
