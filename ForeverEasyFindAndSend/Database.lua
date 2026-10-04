@@ -57,6 +57,8 @@ local KNOWN_FIELDS = {
     "class",
     "classFile",
     "classID",
+    "guild",
+    "zone",
     "favorite",
     "firstSeen",
     "lastSeen",
@@ -65,6 +67,21 @@ local KNOWN_FIELDS = {
 local database
 local byGUID = {}
 local byActionName = {}
+local changeHandler
+local batchDepth = 0
+local batchDirty = false
+local batchSearchDirty = false
+
+local SEARCH_FIELDS = {
+    "actionName",
+    "displayName",
+    "firstName",
+    "surname",
+    "level",
+    "race",
+    "class",
+    "classFile",
+}
 
 local function Now()
     if type(GetServerTime) == "function" then
@@ -106,6 +123,25 @@ local function RebuildIndexes()
             byActionName[character.actionName] = character
         end
     end
+end
+
+local function NotifyChanged(searchChanged)
+    if batchDepth > 0 then
+        batchDirty = true
+        batchSearchDirty = batchSearchDirty or searchChanged == true
+    elseif changeHandler then
+        changeHandler(searchChanged == true)
+    end
+end
+
+local function SearchFieldsChanged(character, previous)
+    for fieldIndex = 1, #SEARCH_FIELDS do
+        local field = SEARCH_FIELDS[fieldIndex]
+        if character[field] ~= previous[field] then
+            return true
+        end
+    end
+    return false
 end
 
 local function FindExisting(incoming)
@@ -205,6 +241,14 @@ function Database.Upsert(incoming)
         created = true
     end
 
+    local previous = {}
+    for fieldIndex = 1, #SEARCH_FIELDS do
+        local field = SEARCH_FIELDS[fieldIndex]
+        previous[field] = character[field]
+    end
+    local previousGUID = character.guid
+    local previousActionName = character.actionName
+
     CopyKnownFields(character, incoming, true)
     CopySources(character, incoming)
     character.displayName = character.displayName or character.actionName
@@ -218,7 +262,20 @@ function Database.Upsert(incoming)
         character.sources[incoming.source] = true
     end
 
-    RebuildIndexes()
+    if previousGUID and previousGUID ~= character.guid and byGUID[previousGUID] == character then
+        byGUID[previousGUID] = nil
+    end
+    if previousActionName
+        and previousActionName ~= character.actionName
+        and byActionName[previousActionName] == character then
+        byActionName[previousActionName] = nil
+    end
+    if character.guid then
+        byGUID[character.guid] = character
+    end
+    byActionName[character.actionName] = character
+
+    NotifyChanged(created or SearchFieldsChanged(character, previous))
     return character, nil, created
 end
 
@@ -232,8 +289,43 @@ function Database.SetFavorite(character, favorite)
         return false
     end
 
-    character.favorite = favorite == true
+    local newValue = favorite == true
+    if character.favorite == newValue then
+        return true
+    end
+
+    character.favorite = newValue
+    NotifyChanged(false)
     return true
+end
+
+function Database.SetChangeHandler(handler)
+    changeHandler = type(handler) == "function" and handler or nil
+end
+
+function Database.BeginBatch()
+    batchDepth = batchDepth + 1
+end
+
+function Database.EndBatch()
+    if batchDepth == 0 then
+        return false
+    end
+
+    batchDepth = batchDepth - 1
+    if batchDepth == 0 and batchDirty then
+        local searchChanged = batchSearchDirty
+        batchDirty = false
+        batchSearchDirty = false
+        if changeHandler then
+            changeHandler(searchChanged)
+        end
+    end
+    return true
+end
+
+function Database.RequestRefresh(searchChanged)
+    NotifyChanged(searchChanged == true)
 end
 
 function Database.GetPersistentRecords()
