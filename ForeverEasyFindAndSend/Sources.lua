@@ -132,7 +132,7 @@ local function SyncGroup()
     local count
     if IsInRaid() then
         prefix = "raid"
-        count = GetNumGroupMembers()
+        count = MAX_RAID_MEMBERS or 40
     else
         prefix = "party"
         count = GetNumSubgroupMembers()
