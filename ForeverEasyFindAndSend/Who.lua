@@ -86,6 +86,9 @@ function Who.GetState(query)
         return false, "Search Online", ""
     end
     if Now() < cooldownUntil then
+        if Trim(query) == lastQuery and statusText ~= "" then
+            return false, "Search Online", statusText
+        end
         return false, "Search Online", "Online search is temporarily on cooldown."
     end
     if Trim(query) ~= lastQuery then
