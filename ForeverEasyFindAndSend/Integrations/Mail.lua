@@ -60,8 +60,8 @@ end
 
 local function CreateSelectionHandler(originalHandler)
     return function(editBox, newText, nameInfo, ambiguatedName)
-        if type(nameInfo) == "table" and nameInfo.foreverEasyNamesRecord then
-            local actionName = nameInfo.actionName or nameInfo.foreverEasyNamesRecord.actionName
+        if type(nameInfo) == "table" and nameInfo.fefsRecord then
+            local actionName = nameInfo.actionName or nameInfo.fefsRecord.actionName
             if type(actionName) == "string" and actionName ~= "" then
                 editBox:SetText(actionName)
                 editBox:SetCursorPosition(string.len(actionName))
@@ -90,7 +90,7 @@ local function CreateCombinedSource(originalSource)
                 name = FormatSuggestion(localResults[resultIndex].record),
                 actionName = localResults[resultIndex].record.actionName,
                 priority = otherPriority,
-                foreverEasyNamesRecord = localResults[resultIndex].record,
+                fefsRecord = localResults[resultIndex].record,
             }, limit)
         end
 
@@ -115,12 +115,12 @@ function Mail.TryInstall()
         return false
     end
 
-    editBox.foreverEasyNamesOriginalSource = editBox.autoCompleteSource
-    editBox.foreverEasyNamesOriginalCustomAutoCompleteFunction = editBox.customAutoCompleteFunction
-    editBox.foreverEasyNamesOriginalAddHighlightedText = editBox.addHighlightedText
+    editBox.fefsOriginalSource = editBox.autoCompleteSource
+    editBox.fefsOriginalCustomAutoCompleteFunction = editBox.customAutoCompleteFunction
+    editBox.fefsOriginalAddHighlightedText = editBox.addHighlightedText
 
-    editBox.autoCompleteSource = CreateCombinedSource(editBox.foreverEasyNamesOriginalSource)
-    editBox.customAutoCompleteFunction = CreateSelectionHandler(editBox.foreverEasyNamesOriginalCustomAutoCompleteFunction)
+    editBox.autoCompleteSource = CreateCombinedSource(editBox.fefsOriginalSource)
+    editBox.customAutoCompleteFunction = CreateSelectionHandler(editBox.fefsOriginalCustomAutoCompleteFunction)
     editBox.addHighlightedText = false
     installed = true
 

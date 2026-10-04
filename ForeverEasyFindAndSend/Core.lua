@@ -4,7 +4,7 @@ ns.addonName = addonName
 ns.version = "0.1.0-alpha.2"
 
 function ns.Print(message)
-    print("|cff33ff99ForeverEasyNames:|r " .. tostring(message))
+    print("|cff33ff99[FEFS]|r " .. tostring(message))
 end
 
 local eventFrame = CreateFrame("Frame")
@@ -28,8 +28,8 @@ eventFrame:SetScript("OnEvent", function(_, event, loadedAddonName)
     end
 end)
 
-SLASH_FOREVEREASYNAMES1 = "/fen"
-SlashCmdList.FOREVEREASYNAMES = function(message)
+SLASH_FOREVEREASYFINDANDSEND1 = "/fefs"
+SlashCmdList.FOREVEREASYFINDANDSEND = function(message)
     local command, argument = string.match(message or "", "^%s*(%S*)%s*(.-)%s*$")
     command = string.lower(command or "")
 
@@ -45,5 +45,5 @@ SlashCmdList.FOREVEREASYNAMES = function(message)
 
     local mailStatus = ns.Mail and ns.Mail.IsInstalled() and "installed" or "waiting for Blizzard_MailFrame"
     ns.Print(string.format("%s; schema %s; mail integration %s.", ns.version, tostring(ns.Database.GetSchemaVersion()), mailStatus))
-    ns.Print("Use /fen search <name> to inspect the development search fixture.")
+    ns.Print("Use /fefs search <name> to inspect the development search fixture.")
 end

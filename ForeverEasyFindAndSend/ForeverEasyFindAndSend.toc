@@ -1,0 +1,12 @@
+## Interface: 16001
+## Title: Forever Easy Find & Send
+## Notes: Character search, mail autocomplete, and contacts for WoW Forever.
+## Author: Forever Easy Find & Send contributors
+## Version: 0.1.0-alpha.2
+## SavedVariables: ForeverEasyFindAndSendDB, ForeverEasyNamesDB
+
+Core.lua
+Normalizer.lua
+Database.lua
+Search.lua
+Integrations/Mail.lua

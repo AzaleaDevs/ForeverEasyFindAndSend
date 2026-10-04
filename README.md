@@ -1,6 +1,6 @@
-# ForeverEasyNames
+# Forever Easy Find & Send
 
-ForeverEasyNames is a World of Warcraft: Forever addon that provides accent-insensitive character name search and enhanced name autocomplete.
+Forever Easy Find & Send is a World of Warcraft: Forever addon that provides accent-insensitive character search, enhanced mail autocomplete, and a local character directory.
 
 ## Development status
 
@@ -20,8 +20,8 @@ The fixture is development data. It is not written to SavedVariables and will be
 ## Installation
 
 1. Close World of Warcraft or return to the character selection screen.
-2. Copy the `ForeverEasyNames` directory into the Forever client's `Interface/AddOns` directory.
-3. Start Forever and enable **ForeverEasyNames** in the AddOns list.
+2. Copy the `ForeverEasyFindAndSend` directory into the Forever client's `Interface/AddOns` directory.
+3. Start Forever and enable **Forever Easy Find & Send** in the AddOns list.
 4. Log in and open a mailbox.
 
 ## Usage
@@ -36,7 +36,7 @@ The following development-only characters are available in `0.1.0-alpha.2`:
 - `Amigö Kebäck`
 - `Âmïgø Këbäck`
 
-Use `/fen status` to print the addon version and mail integration state. Use `/fen search <text>` to inspect search results in chat.
+Use `/fefs status` to print the addon version and mail integration state. Use `/fefs search <text>` to inspect search results in chat.
 
 ## Known limitations
 
@@ -48,7 +48,7 @@ Use `/fen status` to print the addon version and mail integration state. Use `/f
 
 ## Privacy
 
-ForeverEasyNames does not use external servers, telemetry, analytics, or tracking. Future learned character data will be stored locally through WoW SavedVariables.
+Forever Easy Find & Send does not use external servers, telemetry, analytics, or tracking. Learned character data is stored locally through WoW SavedVariables.
 
 ## Roadmap
 
@@ -58,10 +58,10 @@ ForeverEasyNames does not use external servers, telemetry, analytics, or trackin
 
 ## Issues and contributions
 
-Bug reports should include the Forever version and build, ForeverEasyNames version, reproduction steps, enabled addons, and the complete Lua error if one is shown.
+Bug reports should include the Forever version and build, Forever Easy Find & Send version, reproduction steps, enabled addons, and the complete Lua error if one is shown.
 
 Contributions are welcome. Do not submit copied or obfuscated addon code, executable files, telemetry, or code that attempts to bypass protected client functionality.
 
 ## License
 
-ForeverEasyNames is released under the [MIT License](LICENSE).
+Forever Easy Find & Send is released under the [MIT License](LICENSE).
