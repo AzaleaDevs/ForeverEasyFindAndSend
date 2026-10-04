@@ -275,7 +275,9 @@ function Database.Upsert(incoming)
     end
     byActionName[character.actionName] = character
 
-    NotifyChanged(created or SearchFieldsChanged(character, previous))
+    if created or SearchFieldsChanged(character, previous) then
+        NotifyChanged(true)
+    end
     return character, nil, created
 end
 
