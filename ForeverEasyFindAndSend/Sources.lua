@@ -158,6 +158,11 @@ local function SyncGuild()
     end
 
     local memberCount = GetNumGuildMembers() or 0
+    if memberCount == 0 then
+        states.guild = "pending"
+        return
+    end
+
     for memberIndex = 1, memberCount do
         local name, _, _, level, className, _, _, _, isOnline, _, classFile, _, _, _, _, _, guid =
             GetGuildRosterInfo(memberIndex)
