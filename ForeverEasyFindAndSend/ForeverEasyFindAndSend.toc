@@ -12,3 +12,4 @@ Database.lua
 Search.lua
 Sources.lua
 Integrations/Mail.lua
+UI/MailContacts.lua

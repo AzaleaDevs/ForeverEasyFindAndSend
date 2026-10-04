@@ -16,6 +16,15 @@ eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 eventFrame:RegisterEvent("GUILD_ROSTER_UPDATE")
 eventFrame:RegisterEvent("PLAYER_GUILD_UPDATE")
 
+local function TryInstallMailFeatures()
+    if ns.Mail then
+        ns.Mail.TryInstall()
+    end
+    if ns.MailContacts then
+        ns.MailContacts.TryInstall()
+    end
+end
+
 eventFrame:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
         local loadedAddonName = ...
@@ -24,11 +33,9 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
             ns.Search.Refresh()
             ns.isLoaded = true
 
-            if ns.Mail then
-                ns.Mail.TryInstall()
-            end
-        elseif loadedAddonName == "Blizzard_MailFrame" and ns.isLoaded and ns.Mail then
-            ns.Mail.TryInstall()
+            TryInstallMailFeatures()
+        elseif loadedAddonName == "Blizzard_MailFrame" and ns.isLoaded then
+            TryInstallMailFeatures()
         end
         return
     end
@@ -65,6 +72,13 @@ SlashCmdList.FOREVEREASYFINDANDSEND = function(message)
     end
 
     local mailStatus = ns.Mail and ns.Mail.IsInstalled() and "installed" or "waiting for Blizzard_MailFrame"
-    ns.Print(string.format("%s; schema %s; mail integration %s.", ns.version, tostring(ns.Database.GetSchemaVersion()), mailStatus))
+    local panelStatus = ns.MailContacts and ns.MailContacts.IsInstalled() and "installed" or "waiting for Blizzard_MailFrame"
+    ns.Print(string.format(
+        "%s; schema %s; mail autocomplete %s; contacts panel %s.",
+        ns.version,
+        tostring(ns.Database.GetSchemaVersion()),
+        mailStatus,
+        panelStatus
+    ))
     ns.Print("Use /fefs search <name> or /fefs debug.")
 end
