@@ -6,7 +6,12 @@ ns.Mail = Mail
 local installed = false
 
 local function AppendUnique(target, seenNames, entry, limit)
-    if type(entry) ~= "table" or type(entry.name) ~= "string" or seenNames[entry.name] then
+    if type(entry) ~= "table" or type(entry.name) ~= "string" then
+        return
+    end
+
+    local actionName = type(entry.actionName) == "string" and entry.actionName or entry.name
+    if seenNames[actionName] then
         return
     end
 
@@ -14,8 +19,27 @@ local function AppendUnique(target, seenNames, entry, limit)
         return
     end
 
-    seenNames[entry.name] = true
+    seenNames[actionName] = true
     target[#target + 1] = entry
+end
+
+local function CreateSelectionHandler(originalHandler)
+    return function(editBox, newText, nameInfo, ambiguatedName)
+        if type(nameInfo) == "table" and nameInfo.foreverEasyNamesRecord then
+            local actionName = nameInfo.actionName or nameInfo.foreverEasyNamesRecord.actionName
+            if type(actionName) == "string" and actionName ~= "" then
+                editBox:SetText(actionName)
+                editBox:SetCursorPosition(string.len(actionName))
+                return true
+            end
+        end
+
+        if type(originalHandler) == "function" then
+            return originalHandler(editBox, newText, nameInfo, ambiguatedName)
+        end
+
+        return false
+    end
 end
 
 local function CreateCombinedSource(originalSource)
@@ -29,6 +53,7 @@ local function CreateCombinedSource(originalSource)
         for resultIndex = 1, #localResults do
             AppendUnique(combined, seenNames, {
                 name = localResults[resultIndex].record.actionName,
+                actionName = localResults[resultIndex].record.actionName,
                 priority = otherPriority,
                 foreverEasyNamesRecord = localResults[resultIndex].record,
             }, limit)
@@ -56,7 +81,12 @@ function Mail.TryInstall()
     end
 
     editBox.foreverEasyNamesOriginalSource = editBox.autoCompleteSource
+    editBox.foreverEasyNamesOriginalCustomAutoCompleteFunction = editBox.customAutoCompleteFunction
+    editBox.foreverEasyNamesOriginalAddHighlightedText = editBox.addHighlightedText
+
     editBox.autoCompleteSource = CreateCombinedSource(editBox.foreverEasyNamesOriginalSource)
+    editBox.customAutoCompleteFunction = CreateSelectionHandler(editBox.foreverEasyNamesOriginalCustomAutoCompleteFunction)
+    editBox.addHighlightedText = false
     installed = true
 
     return true
