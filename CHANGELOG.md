@@ -6,6 +6,18 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0-alpha.2] - 2026-10-04
+
+### Added
+
+- Optional level, race, and localized class metadata in mail suggestion rows.
+
+### Changed
+
+- Mail autocomplete now preserves the exact typed query until the user explicitly selects a suggestion.
+- Local and native suggestions are deduplicated by the name used for the mail action.
+- Forever's native selection behavior remains available for native results.
+
 ## [0.1.0-alpha.1] - 2026-10-04
 
 ### Added

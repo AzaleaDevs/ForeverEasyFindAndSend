@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 ns.addonName = addonName
-ns.version = "0.1.0-alpha.1"
+ns.version = "0.1.0-alpha.2"
 
 function ns.Print(message)
     print("|cff33ff99ForeverEasyNames:|r " .. tostring(message))
@@ -47,4 +47,3 @@ SlashCmdList.FOREVEREASYNAMES = function(message)
     ns.Print(string.format("%s; schema %s; mail integration %s.", ns.version, tostring(ns.Database.GetSchemaVersion()), mailStatus))
     ns.Print("Use /fen search <name> to inspect the development search fixture.")
 end
-

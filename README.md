@@ -10,7 +10,9 @@ The project is in early alpha development and targets **WoW Forever 1.60.1** (`I
 
 - Accent-insensitive and separator-tolerant character name search.
 - Mail recipient suggestions through Forever's native autocomplete UI.
-- Exact insertion of the selected character name.
+- Search-as-you-type behavior that leaves the recipient query unchanged.
+- Optional level, race, and localized class metadata in suggestion rows.
+- Exact insertion of the selected character name only after an explicit click or Enter.
 - A temporary in-memory fixture with difficult names for local testing.
 
 The fixture is development data. It is not written to SavedVariables and will be removed after real character sources are implemented.
@@ -26,7 +28,9 @@ The fixture is development data. It is not written to SavedVariables and will be
 
 Open the Send Mail tab and type part of a test character name in the **To:** field. For example, `ami`, `keback`, or `amigokeback`.
 
-The following development-only characters are available in `0.1.0-alpha.1`:
+Typing does not replace or complete the current query. Use Up/Down to change the highlighted suggestion, Enter or a mouse click to select it, and Escape to close the suggestions. Only the exact character name is inserted; displayed metadata is never part of the recipient.
+
+The following development-only characters are available in `0.1.0-alpha.2`:
 
 - `Amigo Kebab`
 - `Amigö Kebäck`
@@ -37,7 +41,8 @@ Use `/fen status` to print the addon version and mail integration state. Use `/f
 ## Known limitations
 
 - Character acquisition from friends, guild, groups, chat, and WHO is not implemented.
-- The native autocomplete dropdown displays names only. Optional character metadata is stored separately but is not displayed in this alpha.
+- The dropdown uses Forever's native row renderer, so the metadata uses the same text styling as the character name.
+- Tab follows the native autocomplete navigation behavior and does not confirm a selection.
 - The prototype has only been designed for WoW Forever 1.60.1 build 70205.
 - SavedVariables persistence must still be validated on the current Forever client.
 
@@ -48,7 +53,6 @@ ForeverEasyNames does not use external servers, telemetry, analytics, or trackin
 ## Roadmap
 
 - Replace development fixtures with legitimate local character sources.
-- Enrich records with available level, race, and class metadata.
 - Add whisper/chat integration after mail autocomplete is validated.
 - Add an explicit, user-initiated WHO search while respecting client restrictions and throttling.
 
@@ -61,4 +65,3 @@ Contributions are welcome. Do not submit copied or obfuscated addon code, execut
 ## License
 
 ForeverEasyNames is released under the [MIT License](LICENSE).
-

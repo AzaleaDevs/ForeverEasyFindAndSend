@@ -2,7 +2,7 @@
 ## Title: ForeverEasyNames
 ## Notes: Accent-insensitive character name autocomplete for WoW Forever.
 ## Author: ForeverEasyNames contributors
-## Version: 0.1.0-alpha.1
+## Version: 0.1.0-alpha.2
 ## SavedVariables: ForeverEasyNamesDB
 
 Core.lua
