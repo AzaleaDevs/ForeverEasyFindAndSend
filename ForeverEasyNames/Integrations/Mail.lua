@@ -5,6 +5,41 @@ ns.Mail = Mail
 
 local installed = false
 
+local function GetClassDisplayName(record)
+    if type(record.class) ~= "string" or record.class == "" then
+        return nil
+    end
+
+    if type(LOCALIZED_CLASS_NAMES_MALE) == "table" and LOCALIZED_CLASS_NAMES_MALE[record.class] then
+        return LOCALIZED_CLASS_NAMES_MALE[record.class]
+    end
+
+    return record.class
+end
+
+local function FormatSuggestion(record)
+    local displayName = record.displayName or record.actionName
+    local metadata = {}
+
+    if record.level ~= nil then
+        metadata[#metadata + 1] = tostring(record.level)
+    end
+    if type(record.race) == "string" and record.race ~= "" then
+        metadata[#metadata + 1] = record.race
+    end
+
+    local className = GetClassDisplayName(record)
+    if className then
+        metadata[#metadata + 1] = className
+    end
+
+    if #metadata == 0 then
+        return displayName
+    end
+
+    return string.format("%s (%s)", displayName, table.concat(metadata, " · "))
+end
+
 local function AppendUnique(target, seenNames, entry, limit)
     if type(entry) ~= "table" or type(entry.name) ~= "string" then
         return
@@ -52,7 +87,7 @@ local function CreateCombinedSource(originalSource)
 
         for resultIndex = 1, #localResults do
             AppendUnique(combined, seenNames, {
-                name = localResults[resultIndex].record.actionName,
+                name = FormatSuggestion(localResults[resultIndex].record),
                 actionName = localResults[resultIndex].record.actionName,
                 priority = otherPriority,
                 foreverEasyNamesRecord = localResults[resultIndex].record,
