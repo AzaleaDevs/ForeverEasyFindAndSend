@@ -30,6 +30,14 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         local loadedAddonName = ...
         if loadedAddonName == addonName then
             ns.Database.Initialize()
+            ns.Database.SetChangeHandler(function(searchChanged)
+                if searchChanged then
+                    ns.Search.Refresh()
+                end
+                if ns.MailContacts then
+                    ns.MailContacts.Refresh()
+                end
+            end)
             ns.Search.Refresh()
             ns.isLoaded = true
 

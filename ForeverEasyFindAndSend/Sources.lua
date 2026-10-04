@@ -47,10 +47,14 @@ local function SplitName(actionName)
     return CleanValue(firstName), CleanValue(surname)
 end
 
-local function RefreshConsumers()
-    ns.Search.Refresh()
-    if ns.MailContacts then
-        ns.MailContacts.Refresh()
+local function RunBatch(callback)
+    ns.Database.BeginBatch()
+    local succeeded, errorMessage = pcall(callback)
+    ns.Database.RequestRefresh(false)
+    ns.Database.EndBatch()
+
+    if not succeeded then
+        error(errorMessage, 0)
     end
 end
 
@@ -272,21 +276,22 @@ function Sources.StartInitialSync()
     initialSyncStarted = true
     ns.Print("Cargando información de jugadores...")
 
-    SyncPlayer()
+    RunBatch(function()
+        SyncPlayer()
 
-    if C_FriendList and type(C_FriendList.ShowFriends) == "function" then
-        C_FriendList.ShowFriends()
-    end
-    SyncFriends()
-    SyncGroup()
+        if C_FriendList and type(C_FriendList.ShowFriends) == "function" then
+            C_FriendList.ShowFriends()
+        end
+        SyncFriends()
+        SyncGroup()
 
-    if IsInGuild()
-        and type(GetNumGuildMembers) == "function"
-        and (GetNumGuildMembers() or 0) > 0 then
-        SyncGuild()
-    end
-    RequestGuildRoster()
-    RefreshConsumers()
+        if IsInGuild()
+            and type(GetNumGuildMembers) == "function"
+            and (GetNumGuildMembers() or 0) > 0 then
+            SyncGuild()
+        end
+        RequestGuildRoster()
+    end)
     MaybeFinishInitialSync()
 
     if not initialSyncFinished then
@@ -299,25 +304,25 @@ function Sources.StartInitialSync()
 end
 
 function Sources.OnEvent(event, ...)
-    if event == "FRIENDLIST_UPDATE" then
-        SyncFriends()
-    elseif event == "GROUP_ROSTER_UPDATE" then
-        SyncGroup()
-    elseif event == "GUILD_ROSTER_UPDATE" then
-        SyncGuild()
-        MaybeFinishInitialSync()
-    elseif event == "PLAYER_GUILD_UPDATE" then
-        guildRequestSent = false
-        SyncGuild()
-        RequestGuildRoster()
-    elseif event == "PLAYER_ENTERING_WORLD" then
-        SyncPlayer()
-        SyncGroup()
-    else
-        return
-    end
-
-    RefreshConsumers()
+    RunBatch(function()
+        if event == "FRIENDLIST_UPDATE" then
+            SyncFriends()
+        elseif event == "GROUP_ROSTER_UPDATE" then
+            SyncGroup()
+        elseif event == "GUILD_ROSTER_UPDATE" then
+            SyncGuild()
+            MaybeFinishInitialSync()
+        elseif event == "PLAYER_GUILD_UPDATE" then
+            guildRequestSent = false
+            SyncGuild()
+            RequestGuildRoster()
+        elseif event == "PLAYER_ENTERING_WORLD" then
+            SyncPlayer()
+            SyncGroup()
+        else
+            ns.Database.RequestRefresh(false)
+        end
+    end)
 end
 
 function Sources.GetGuildEntries()
