@@ -4,6 +4,7 @@
 ## Author: Forever Easy Find & Send contributors
 ## Version: 0.1.0-alpha.2
 ## SavedVariables: ForeverEasyFindAndSendDB, ForeverEasyNamesDB
+## OptionalDeps: ForeverEasyNames
 
 Core.lua
 Normalizer.lua

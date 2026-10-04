@@ -144,7 +144,8 @@ local function ImportLegacyDatabase()
         return
     end
 
-    if type(ForeverEasyNamesDB) == "table" and ForeverEasyNamesDB ~= database then
+    local legacyAvailable = type(ForeverEasyNamesDB) == "table" and ForeverEasyNamesDB ~= database
+    if legacyAvailable then
         if type(ForeverEasyNamesDB.characters) == "table" then
             for _, legacyCharacter in pairs(ForeverEasyNamesDB.characters) do
                 if type(legacyCharacter) == "table" and type(legacyCharacter.actionName) == "string" then
@@ -172,7 +173,7 @@ local function ImportLegacyDatabase()
         end
     end
 
-    database.migrations.foreverEasyNames = true
+    database.migrations.foreverEasyNames = legacyAvailable
     RebuildIndexes()
 end
 
