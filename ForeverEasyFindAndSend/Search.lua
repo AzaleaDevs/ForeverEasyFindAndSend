@@ -4,6 +4,17 @@ local Search = {}
 ns.Search = Search
 
 local index = {}
+local byRecord = {}
+
+local SEARCH_FIELDS = {
+    "actionName",
+    "displayName",
+    "firstName",
+    "surname",
+    "race",
+    "class",
+    "classFile",
+}
 
 local function StartsWith(value, prefix)
     return string.sub(value, 1, string.len(prefix)) == prefix
@@ -39,51 +50,64 @@ local function MatchScore(query, candidate)
     return nil
 end
 
-local function BuildFieldValues(record)
-    local values = {}
-    local fields = {
-        "actionName",
-        "displayName",
-        "firstName",
-        "surname",
-        "race",
-        "class",
-        "classFile",
-    }
-
-    for fieldIndex = 1, #fields do
-        local value = record[fields[fieldIndex]]
-        if type(value) == "string" and value ~= "" then
-            values[#values + 1] = value
-        end
+local function AddSearchValue(values, seen, value)
+    if type(value) ~= "string" or value == "" then
+        return
     end
 
-    if record.level ~= nil then
-        values[#values + 1] = tostring(record.level)
+    local compact = ns.Normalizer.Normalize(value).compact
+    if compact ~= "" and not seen[compact] then
+        seen[compact] = true
+        values[#values + 1] = compact
     end
-
-    return values
 end
 
-local function MatchesAllTerms(record, query)
-    if query.compact == "" then
-        return true
+local function BuildEntry(record)
+    if type(record.actionName) ~= "string" or record.actionName == "" then
+        return nil
     end
 
-    local values = BuildFieldValues(record)
-    local normalizedValues = {}
-    for valueIndex = 1, #values do
-        if type(values[valueIndex]) == "string" and values[valueIndex] ~= "" then
-            normalizedValues[#normalizedValues + 1] = ns.Normalizer.Normalize(values[valueIndex]).compact
+    local normalizedName = ns.Normalizer.Normalize(record.actionName)
+    local values = {}
+    local seen = {}
+
+    for fieldIndex = 1, #SEARCH_FIELDS do
+        AddSearchValue(values, seen, record[SEARCH_FIELDS[fieldIndex]])
+    end
+    if record.level ~= nil then
+        AddSearchValue(values, seen, tostring(record.level))
+    end
+
+    return {
+        record = record,
+        normalized = normalizedName,
+        searchValues = values,
+        sortName = normalizedName.folded,
+    }
+end
+
+local function GetEntry(record)
+    local entry = byRecord[record]
+    if not entry then
+        entry = BuildEntry(record)
+        if entry then
+            byRecord[record] = entry
         end
+    end
+    return entry
+end
+
+local function MatchesAllTerms(entry, query)
+    if query.compact == "" then
+        return true
     end
 
     for termIndex = 1, #query.tokens do
         local term = query.tokens[termIndex]
         local matched = false
 
-        for valueIndex = 1, #normalizedValues do
-            if string.find(normalizedValues[valueIndex], term, 1, true) then
+        for valueIndex = 1, #entry.searchValues do
+            if string.find(entry.searchValues[valueIndex], term, 1, true) then
                 matched = true
                 break
             end
@@ -119,15 +143,14 @@ end
 
 function Search.Refresh()
     wipe(index)
+    wipe(byRecord)
 
     local records = ns.Database.GetSearchRecords()
     for recordIndex = 1, #records do
-        local record = records[recordIndex]
-        if type(record.actionName) == "string" and record.actionName ~= "" then
-            index[#index + 1] = {
-                record = record,
-                normalized = ns.Normalizer.Normalize(record.actionName),
-            }
+        local entry = BuildEntry(records[recordIndex])
+        if entry then
+            index[#index + 1] = entry
+            byRecord[entry.record] = entry
         end
     end
 end
@@ -147,14 +170,13 @@ function Search.Find(text, limit)
             results[#results + 1] = {
                 record = candidate.record,
                 score = score,
-                sortName = candidate.normalized.folded,
+                sortName = candidate.sortName,
             }
         end
     end
 
     SortResults(results)
     TrimResults(results, limit)
-
     return results
 end
 
@@ -164,9 +186,9 @@ function Search.Filter(records, text, limit)
 
     for recordIndex = 1, #records do
         local record = records[recordIndex]
-        if type(record.actionName) == "string" and MatchesAllTerms(record, query) then
-            local normalizedName = ns.Normalizer.Normalize(record.actionName)
-            local score = MatchScore(query, normalizedName) or 100
+        local entry = GetEntry(record)
+        if entry and MatchesAllTerms(entry, query) then
+            local score = MatchScore(query, entry.normalized) or 100
             if query.compact == "" then
                 score = record.favorite and 10 or 0
             elseif record.favorite then
@@ -176,13 +198,16 @@ function Search.Filter(records, text, limit)
             results[#results + 1] = {
                 record = record,
                 score = score,
-                sortName = normalizedName.folded,
+                sortName = entry.sortName,
             }
         end
     end
 
     SortResults(results)
     TrimResults(results, limit)
-
     return results
+end
+
+function Search.GetIndexedRecordCount()
+    return #index
 end
