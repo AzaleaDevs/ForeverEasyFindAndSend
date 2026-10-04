@@ -14,6 +14,8 @@ local activeTab = "GENERAL"
 local panel
 local toggleButton
 local searchBox
+local onlineSearchButton
+local whoStatusText
 local scrollFrame
 local emptyText
 local rows = {}
@@ -226,6 +228,7 @@ local function ScheduleSearchRefresh()
     local query = searchBox:GetText() or ""
 
     ResetScroll()
+    MailContacts.UpdateWhoState()
     if query == "" or not C_Timer or type(C_Timer.After) ~= "function" then
         MailContacts.Refresh()
         return
@@ -246,6 +249,17 @@ local function SetActiveTab(tab)
         button:SetEnabled(tabName ~= activeTab)
     end
 
+    if activeTab == "GENERAL" then
+        searchBox:SetWidth(158)
+        onlineSearchButton:Show()
+        whoStatusText:Show()
+    else
+        searchBox:SetWidth(270)
+        onlineSearchButton:Hide()
+        whoStatusText:Hide()
+    end
+
+    MailContacts.UpdateWhoState()
     MailContacts.Refresh()
 end
 
@@ -296,6 +310,22 @@ local function CreatePanel()
         self:ClearFocus()
     end)
 
+    onlineSearchButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    onlineSearchButton:SetSize(106, 24)
+    onlineSearchButton:SetPoint("TOPLEFT", 262, -40)
+    onlineSearchButton:SetText("Search Online")
+    onlineSearchButton:SetScript("OnClick", function()
+        if ns.Who then
+            ns.Who.Request(searchBox:GetText())
+        end
+    end)
+
+    whoStatusText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    whoStatusText:SetPoint("TOPLEFT", 98, -68)
+    whoStatusText:SetWidth(270)
+    whoStatusText:SetJustifyH("LEFT")
+    whoStatusText:SetTextColor(0.7, 0.7, 0.7)
+
     panel.tabButtons = {}
     local tabs = {
         { key = "GENERAL", label = "GENERAL" },
@@ -316,7 +346,7 @@ local function CreatePanel()
     end
 
     scrollFrame = CreateFrame("ScrollFrame", "FEFSContactScrollFrame", panel, "FauxScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", 98, -74)
+    scrollFrame:SetPoint("TOPLEFT", 98, -91)
     scrollFrame:SetSize(262, VISIBLE_ROWS * ROW_HEIGHT)
     scrollFrame:SetScript("OnVerticalScroll", function(self, offset)
         FauxScrollFrame_OnVerticalScroll(self, offset, ROW_HEIGHT, MailContacts.Refresh)
@@ -377,12 +407,24 @@ function MailContacts.IsInstalled()
     return installed
 end
 
+function MailContacts.UpdateWhoState()
+    if not installed or not onlineSearchButton or not whoStatusText or not ns.Who then
+        return
+    end
+
+    local enabled, label, message = ns.Who.GetState(searchBox:GetText())
+    onlineSearchButton:SetText(label)
+    onlineSearchButton:SetEnabled(enabled)
+    whoStatusText:SetText(message or "")
+end
+
 function MailContacts.Refresh()
     if not installed or not panel then
         return
     end
 
     local query = searchBox:GetText() or ""
+    MailContacts.UpdateWhoState()
     visibleResults = ns.Search.Filter(GetRecordsForActiveTab(), query)
     local offset = FauxScrollFrame_GetOffset(scrollFrame)
 

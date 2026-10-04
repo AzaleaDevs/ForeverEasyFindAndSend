@@ -12,5 +12,6 @@ Formatter.lua
 Database.lua
 Search.lua
 Sources.lua
+Who.lua
 Integrations/Mail.lua
 UI/MailContacts.lua

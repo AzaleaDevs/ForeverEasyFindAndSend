@@ -15,6 +15,7 @@ eventFrame:RegisterEvent("FRIENDLIST_UPDATE")
 eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 eventFrame:RegisterEvent("GUILD_ROSTER_UPDATE")
 eventFrame:RegisterEvent("PLAYER_GUILD_UPDATE")
+eventFrame:RegisterEvent("WHO_LIST_UPDATE")
 
 local function TryInstallMailFeatures()
     if ns.Mail then
@@ -48,7 +49,18 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         return
     end
 
-    if not ns.isLoaded or not ns.Sources then
+    if not ns.isLoaded then
+        return
+    end
+
+    if event == "WHO_LIST_UPDATE" then
+        if ns.Who then
+            ns.Who.OnEvent(event)
+        end
+        return
+    end
+
+    if not ns.Sources then
         return
     end
 
@@ -76,6 +88,9 @@ SlashCmdList.FOREVEREASYFINDANDSEND = function(message)
 
     if command == "debug" then
         ns.Sources.PrintDebug()
+        if ns.Who then
+            ns.Who.PrintDebug()
+        end
         return
     end
 
