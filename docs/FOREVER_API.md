@@ -10,7 +10,7 @@ This document records the evidence used by Forever Easy Find & Send. It is not a
 - `SendMailNameEditBox.autoCompleteSource` is a function.
 - `SendMailNameEditBox.autoCompleteContext` is `"mail"`.
 - `C_FriendList.GetFriendInfoByIndex` exists.
-- `C_FriendList.SendWho` and `C_FriendList.GetWhoInfo` exist, but alpha.3 does not call them.
+- `C_FriendList.SendWho` and `C_FriendList.GetWhoInfo` exist.
 - `GetUnitName("player", true)` returns the exact full action name.
 - `UnitName("player")` returns first name and surname separately.
 - The exposed surname separator is a space.
@@ -34,7 +34,20 @@ Reference inspected: [Gethe/wow-ui-source, `forever` branch](https://github.com/
 - `PLAYER_LOGIN`, `PLAYER_ENTERING_WORLD`, and `GROUP_ROSTER_UPDATE` are event-driven synchronization points.
 - `BackdropTemplate`, `SearchBoxTemplate`, `FauxScrollFrameTemplate`, `CLASS_ICON_TCOORDS`, and `RAID_CLASS_COLORS` are present.
 
-## Alpha.3 synchronization policy
+### WHO API inspected for alpha.3.1
+
+The generated Forever FriendList documentation declares:
+
+- `C_FriendList.SendWho(filter, origin?, filters?)`. It is marked restricted, requires the friend list, and permits secret arguments only when untainted.
+- `C_FriendList.GetNumWhoResults()` returning `numWhos, totalNumWhos`.
+- `C_FriendList.GetWhoInfo(index)` returning a `WhoInfo` table.
+- `WHO_LIST_UPDATE` as the result event.
+
+`WhoInfo` contains `fullName`, `fullGuildName`, `level`, `raceStr`, `classStr`, `area`, optional `filename`, `gender`, and optional `timerunningSeasonID`. FEFS alpha.3.1 consumes only `fullName`, `fullGuildName`, `level`, `raceStr`, `classStr`, `area`, and `filename`.
+
+Forever's own `WhoFrameEditBoxMixin:OnEnterPressed()` calls `C_FriendList.SendWho(text, Enum.SocialWhoOrigin.Social)`. FEFS follows that signature only from the General panel button's click handler. The inspected API and FrameXML expose no cooldown-query function. FEFS therefore allows one pending request, applies a 10-second local minimum interval, times out its UI state after 15 seconds, and never retries automatically.
+
+## Alpha.3.1 synchronization policy
 
 - SavedVariables initialize during the addon's `ADDON_LOADED`.
 - Player, friends, and the current group are read once at login and refreshed on their official events.
@@ -42,7 +55,9 @@ Reference inspected: [Gethe/wow-ui-source, `forever` branch](https://github.com/
 - Later guild roster requests only occur after `PLAYER_GUILD_UPDATE`.
 - Guild data is consumed only from `GUILD_ROSTER_UPDATE` or an already populated roster cache.
 - No `OnUpdate` polling is used.
-- No WHO request is made.
+- WHO requests are never made by login, events, timers, typing, or empty local results. Only a direct click on **Search Online** calls `SendWho`.
+- FEFS consumes `WHO_LIST_UPDATE` only while its own request is pending and stores returned records with the `who` source.
+- Database identity indexes are updated incrementally. Bulk source imports batch consumer invalidation into one search/UI refresh.
 
 All source APIs are checked before use. Missing APIs place that source in an explicit unavailable state.
 
@@ -53,5 +68,6 @@ All source APIs are checked before use. Missing APIs place that source in an exp
 - Visual states of the native `friends-icon-favorites` atlases in the Forever mail panel.
 - Class icon texture appearance for every class available in Forever.
 - The timing of the first `FRIENDLIST_UPDATE` and `GUILD_ROSTER_UPDATE` on fresh login.
+- WHO server throttling behavior and result timing. No queryable cooldown was found, so the local interval is deliberately conservative and remains subject to server enforcement.
 
 FEFS preserves the exact name returned by each source as `actionName`; it does not reconstruct that value from normalized search data.

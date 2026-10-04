@@ -2,7 +2,7 @@
 ## Title: Forever Easy Find & Send
 ## Notes: Character search, mail autocomplete, and contacts for WoW Forever.
 ## Author: Forever Easy Find & Send contributors
-## Version: 0.1.0-alpha.3
+## Version: 0.1.0-alpha.3.1
 ## SavedVariables: ForeverEasyFindAndSendDB, ForeverEasyNamesDB
 ## OptionalDeps: ForeverEasyNames
 

@@ -6,6 +6,26 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0-alpha.3.1] - 2026-10-04
+
+### Added
+
+- Explicit **Search Online** action in General using Forever's WHO API.
+- Persistent enrichment of WHO results with only the name, level, race, class, guild, and zone fields returned by the client.
+- WHO request states, a conservative local cooldown, timeout handling, and `/fefs debug` diagnostics.
+
+### Changed
+
+- Precompute normalized character search values in memory instead of rebuilding them for every record on every keypress.
+- Maintain GUID and exact-action-name database indexes incrementally.
+- Batch login, friend, group, and guild imports so search and UI consumers refresh once per synchronization event.
+- Debounce non-empty contact searches by 75 ms and skip unchanged visible-row rendering work.
+
+### Fixed
+
+- Removed the per-keystroke normalization spikes observed with guild rosters near 1,000 characters.
+- Removed per-character full database index rebuilds during bulk guild synchronization.
+
 ## [0.1.0-alpha.3] - 2026-10-04
 
 ### Added
