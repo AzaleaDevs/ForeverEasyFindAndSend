@@ -6,4 +6,4 @@
 ## SavedVariables: ForeverEasyNamesDB
 
 Core.lua
-
+Normalizer.lua

@@ -12,4 +12,4 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 - Initial WoW Forever addon project structure.
 - MIT license and public project documentation.
-
+- Conservative Latin character folding for accent-insensitive search.
