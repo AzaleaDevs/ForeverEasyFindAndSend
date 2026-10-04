@@ -6,6 +6,29 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0-alpha.3] - 2026-10-04
+
+### Added
+
+- Account-wide persistent character directory with conservative GUID and exact-action-name deduplication.
+- Initial event-driven synchronization from the player, WoW friends, current guild, and current party or raid.
+- A collapsible mail contacts panel with General, Guild, and Favorites views.
+- Multi-term filtering by name, race, class, and level.
+- Class icons, class colors, exact-recipient buttons, and persistent favorite controls.
+- `/fefs debug` synchronization diagnostics.
+
+### Changed
+
+- Renamed the addon to Forever Easy Find & Send with technical identifier `ForeverEasyFindAndSend`.
+- Renamed the slash command from `/fen` to `/fefs`.
+- Renamed the primary SavedVariables table to `ForeverEasyFindAndSendDB` and schema to version 2.
+- Enriched mail autocomplete from the shared persistent character database.
+
+### Migration
+
+- Imports the legacy `ForeverEasyNamesDB` without overwriting existing FEFS records when the old addon is loaded during the migration session.
+- Keeps development fixtures separate from SavedVariables.
+
 ## [0.1.0-alpha.2] - 2026-10-04
 
 ### Added

@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 ns.addonName = addonName
-ns.version = "0.1.0-alpha.2"
+ns.version = "0.1.0-alpha.3"
 
 function ns.Print(message)
     print("|cff33ff99[FEFS]|r " .. tostring(message))
