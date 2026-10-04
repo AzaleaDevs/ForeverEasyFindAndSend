@@ -203,7 +203,7 @@ local function GuildSummary()
 end
 
 local function FinishInitialSync()
-    if initialSyncFinished then
+    if not initialSyncStarted or initialSyncFinished then
         return
     end
 
@@ -218,7 +218,7 @@ local function FinishInitialSync()
 end
 
 local function MaybeFinishInitialSync()
-    if states.guild ~= "pending" then
+    if initialSyncStarted and states.guild ~= "pending" then
         FinishInitialSync()
     end
 end
