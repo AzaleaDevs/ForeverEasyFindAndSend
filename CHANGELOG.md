@@ -13,3 +13,6 @@ The project follows [Semantic Versioning](https://semver.org/).
 - Initial WoW Forever addon project structure.
 - MIT license and public project documentation.
 - Conservative Latin character folding for accent-insensitive search.
+- Versioned local character database with conservative GUID and exact-name merging.
+- In-memory development fixtures that are never written to SavedVariables.
+- Ranked prefix, token, compact-name, and partial matching.

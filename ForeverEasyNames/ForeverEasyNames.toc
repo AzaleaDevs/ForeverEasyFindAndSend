@@ -7,3 +7,5 @@
 
 Core.lua
 Normalizer.lua
+Database.lua
+Search.lua
