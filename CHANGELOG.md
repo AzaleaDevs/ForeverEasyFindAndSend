@@ -16,3 +16,4 @@ The project follows [Semantic Versioning](https://semver.org/).
 - Versioned local character database with conservative GUID and exact-name merging.
 - In-memory development fixtures that are never written to SavedVariables.
 - Ranked prefix, token, compact-name, and partial matching.
+- Mail recipient integration that composes local matches with Blizzard's native autocomplete source.
