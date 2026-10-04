@@ -89,7 +89,7 @@ All data remains local in `ForeverEasyFindAndSendDB`. FEFS has no external serve
 - Guild online state belongs to the current runtime roster and is not persisted as character identity data.
 - Native autocomplete entries only show metadata when the same exact action name is known to FEFS.
 - Forever's native autocomplete renderer uses one text style for the entire suggestion row.
-- The class icon, scroll template, panel dimensions, and Unicode star glyphs require visual validation in the real Forever client.
+- The class icons, native favorite atlas, scroll template, and panel dimensions require visual validation in the real Forever client.
 - Legacy SavedVariables migration requires one bridge session with both addon folders enabled.
 - Chat learning, whisper learning, WHO search, and global server search are not implemented.
 

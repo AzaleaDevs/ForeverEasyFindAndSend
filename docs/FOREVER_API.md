@@ -50,7 +50,7 @@ All source APIs are checked before use. Missing APIs place that source in an exp
 
 - Existence and exact name representation of `GetGuildRosterInfo()` in build 70205, especially for Forever surnames.
 - Visual layout of the side panel at different UI scales.
-- Rendering of Unicode favorite glyphs in the default Forever font.
+- Visual states of the native `friends-icon-favorites` atlases in the Forever mail panel.
 - Class icon texture appearance for every class available in Forever.
 - The timing of the first `FRIENDLIST_UPDATE` and `GUILD_ROSTER_UPDATE` on fresh login.
 
