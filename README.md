@@ -11,7 +11,7 @@ The project is in early alpha development and targets **WoW Forever 1.60.1** (`I
 - Accent-insensitive and separator-tolerant character name search.
 - Mail recipient suggestions through Forever's native autocomplete UI.
 - Search-as-you-type behavior that leaves the recipient query unchanged.
-- Optional level, race, and localized class metadata in suggestion rows.
+- Optional level, race, and class metadata in suggestion rows.
 - Exact insertion of the selected character name only after an explicit click or Enter.
 - A temporary in-memory fixture with difficult names for local testing.
 

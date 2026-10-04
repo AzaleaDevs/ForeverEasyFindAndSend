@@ -10,7 +10,7 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Optional level, race, and localized class metadata in mail suggestion rows.
+- Optional level, race, and class metadata in mail suggestion rows.
 
 ### Changed
 

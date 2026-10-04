@@ -10,8 +10,8 @@ local function GetClassDisplayName(record)
         return nil
     end
 
-    if type(LOCALIZED_CLASS_NAMES_MALE) == "table" and LOCALIZED_CLASS_NAMES_MALE[record.class] then
-        return LOCALIZED_CLASS_NAMES_MALE[record.class]
+    if string.match(record.class, "^[A-Z]+$") then
+        return string.upper(string.sub(record.class, 1, 1)) .. string.lower(string.sub(record.class, 2))
     end
 
     return record.class
