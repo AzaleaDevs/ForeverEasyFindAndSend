@@ -207,6 +207,23 @@ local function GuildSummary()
     return "hermandad pendiente"
 end
 
+local function ContactsSummary(stats)
+    local unavailable = {}
+    if states.player == "unavailable" then
+        unavailable[#unavailable + 1] = "jugador no disponible"
+    end
+    if states.friends == "unavailable" then
+        unavailable[#unavailable + 1] = "amigos no disponibles"
+    end
+
+    local summary = string.format("%d contactos", stats.contacts)
+    if #unavailable > 0 then
+        summary = string.format("%s (%s)", summary, table.concat(unavailable, ", "))
+    end
+
+    return summary
+end
+
 local function FinishInitialSync()
     if not initialSyncStarted or initialSyncFinished then
         return
@@ -215,8 +232,8 @@ local function FinishInitialSync()
     initialSyncFinished = true
     local stats = ns.Database.GetStats()
     ns.Print(string.format(
-        "Listo: %d contactos · %s · %d favoritos.",
-        stats.contacts,
+        "Listo: %s · %s · %d favoritos.",
+        ContactsSummary(stats),
         GuildSummary(),
         stats.favorites
     ))
