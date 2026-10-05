@@ -3,12 +3,33 @@ local _, ns = ...
 local Formatter = {}
 ns.Formatter = Formatter
 
+local classNamesByID = {}
+local classNamesByFile = {}
+
 function Formatter.GetClassName(record)
+    if type(record.classID) == "number" then
+        local cached = classNamesByID[record.classID]
+        if cached then
+            return cached
+        end
+    end
+
+    if type(record.classFile) == "string" and record.classFile ~= "" then
+        local cached = classNamesByFile[record.classFile]
+        if cached then
+            return cached
+        end
+    end
+
     if type(record.classID) == "number"
         and C_CreatureInfo
         and type(C_CreatureInfo.GetClassInfo) == "function" then
         local classInfo = C_CreatureInfo.GetClassInfo(record.classID)
         if type(classInfo) == "table" and type(classInfo.className) == "string" and classInfo.className ~= "" then
+            classNamesByID[record.classID] = classInfo.className
+            if type(record.classFile) == "string" and record.classFile ~= "" then
+                classNamesByFile[record.classFile] = classInfo.className
+            end
             return classInfo.className
         end
     end
@@ -16,6 +37,10 @@ function Formatter.GetClassName(record)
     if type(record.classFile) == "string" and record.classFile ~= "" then
         local localized = LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[record.classFile]
         if type(localized) == "string" and localized ~= "" then
+            classNamesByFile[record.classFile] = localized
+            if type(record.classID) == "number" then
+                classNamesByID[record.classID] = localized
+            end
             return localized
         end
     end

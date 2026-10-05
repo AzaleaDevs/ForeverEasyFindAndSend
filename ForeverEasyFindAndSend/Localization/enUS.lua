@@ -51,7 +51,9 @@ ns.L = {
     PERF_HEADER = "Performance metrics (milliseconds):",
     PERF_GUILD = "guild: events=%d, runs=%d, coalesced=%d, last=%.2f, max=%.2f, processed=%d, modified=%d",
     PERF_SEARCH_REFRESH = "Search.Refresh: runs=%d, last=%.2f, max=%.2f, indexed=%d",
+    PERF_SEARCH_REFRESH_DETAIL = "  records=%.2f, classes=%.2f, build=%.2f, normalized=%d, cache hits=%d",
     PERF_SEARCH_FIND = "Search.Find: runs=%d, last=%.2f, max=%.2f, scanned=%d, matched=%d",
     PERF_SEARCH_FILTER = "Search.Filter: runs=%d, last=%.2f, max=%.2f, scanned=%d, matched=%d",
-    PERF_CONTACTS_REFRESH = "MailContacts.Refresh: runs=%d, last=%.2f, max=%.2f",
+    PERF_CONTACTS_REFRESH = "MailContacts.Refresh: calls=%d, last=%.2f, max=%.2f, logical=%d, rendered=%d, skipped=%d",
+    PERF_CONTACTS_REASONS = "  search=%d, scroll=%d, invalidation=%d, tab=%d, show=%d, other=%d",
 }

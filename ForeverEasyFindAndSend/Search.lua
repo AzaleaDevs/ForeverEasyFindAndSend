@@ -50,33 +50,42 @@ local function MatchScore(query, candidate)
     return nil
 end
 
-local function AddSearchValue(values, seen, value)
+local function AddSearchValue(values, seen, value, normalizedValues, stats)
     if type(value) ~= "string" or value == "" then
         return
     end
 
-    local compact = ns.Normalizer.Normalize(value).compact
+    local compact = normalizedValues[value]
+    if compact == nil then
+        compact = ns.Normalizer.NormalizeCompact(value)
+        normalizedValues[value] = compact
+        stats.normalized = stats.normalized + 1
+    else
+        stats.cacheHits = stats.cacheHits + 1
+    end
     if compact ~= "" and not seen[compact] then
         seen[compact] = true
         values[#values + 1] = compact
     end
 end
 
-local function BuildEntry(record)
+local function BuildEntry(record, normalizedValues, stats)
     if type(record.actionName) ~= "string" or record.actionName == "" then
         return nil
     end
 
     local normalizedName = ns.Normalizer.Normalize(record.actionName)
+    normalizedValues[record.actionName] = normalizedName.compact
+    stats.normalized = stats.normalized + 1
     local values = {}
     local seen = {}
 
     for fieldIndex = 1, #SEARCH_FIELDS do
-        AddSearchValue(values, seen, record[SEARCH_FIELDS[fieldIndex]])
+        AddSearchValue(values, seen, record[SEARCH_FIELDS[fieldIndex]], normalizedValues, stats)
     end
-    AddSearchValue(values, seen, ns.Formatter.GetClassName(record))
+    AddSearchValue(values, seen, ns.Formatter.GetClassName(record), normalizedValues, stats)
     if record.level ~= nil then
-        AddSearchValue(values, seen, tostring(record.level))
+        AddSearchValue(values, seen, tostring(record.level), normalizedValues, stats)
     end
 
     return {
@@ -90,7 +99,7 @@ end
 local function GetEntry(record)
     local entry = byRecord[record]
     if not entry then
-        entry = BuildEntry(record)
+        entry = BuildEntry(record, {}, { normalized = 0, cacheHits = 0 })
         if entry then
             byRecord[record] = entry
         end
@@ -147,16 +156,34 @@ function Search.Refresh()
     wipe(index)
     wipe(byRecord)
 
+    local recordsStartedAt = ns.Performance and ns.Performance.Start()
     local records = ns.Database.GetSearchRecords()
+    local recordsElapsed = ns.Performance and ns.Performance.Elapsed(recordsStartedAt) or 0
+    local classesStartedAt = ns.Performance and ns.Performance.Start()
     for recordIndex = 1, #records do
-        local entry = BuildEntry(records[recordIndex])
+        ns.Formatter.GetClassName(records[recordIndex])
+    end
+    local classesElapsed = ns.Performance and ns.Performance.Elapsed(classesStartedAt) or 0
+    local buildStartedAt = ns.Performance and ns.Performance.Start()
+    local normalizedValues = {}
+    local stats = { normalized = 0, cacheHits = 0 }
+    for recordIndex = 1, #records do
+        local entry = BuildEntry(records[recordIndex], normalizedValues, stats)
         if entry then
             index[#index + 1] = entry
             byRecord[entry.record] = entry
         end
     end
+    local buildElapsed = ns.Performance and ns.Performance.Elapsed(buildStartedAt) or 0
     if ns.Performance then
-        ns.Performance.Stop("searchRefresh", startedAt, { indexed = #index })
+        ns.Performance.Stop("searchRefresh", startedAt, {
+            indexed = #index,
+            records = recordsElapsed,
+            classes = classesElapsed,
+            build = buildElapsed,
+            normalized = stats.normalized,
+            cacheHits = stats.cacheHits,
+        })
     end
 end
 

@@ -25,6 +25,7 @@ local searchGeneration = 0
 local resultsDirty = true
 local lastQuery
 local lastTab
+local lastRenderedOffset
 
 local function SetRecipient(record)
     local editBox = _G.SendMailNameEditBox
@@ -234,13 +235,13 @@ local function ScheduleSearchRefresh()
     ResetScroll()
     MailContacts.UpdateWhoState()
     if query == "" or not C_Timer or type(C_Timer.After) ~= "function" then
-        MailContacts.Refresh()
+        MailContacts.Refresh("search")
         return
     end
 
     C_Timer.After(SEARCH_DEBOUNCE_SECONDS, function()
         if generation == searchGeneration and searchBox and (searchBox:GetText() or "") == query then
-            MailContacts.Refresh()
+            MailContacts.Refresh("search")
         end
     end)
 end
@@ -264,7 +265,7 @@ local function SetActiveTab(tab)
     end
 
     MailContacts.UpdateWhoState()
-    MailContacts.Refresh()
+    MailContacts.Refresh("tab")
 end
 
 local function SetCollapsed(collapsed)
@@ -277,7 +278,7 @@ local function SetCollapsed(collapsed)
     elseif SendMailFrame:IsShown() then
         panel:Show()
         toggleButton:SetText("<")
-        MailContacts.Refresh()
+        MailContacts.Refresh("show")
     end
 end
 
@@ -287,6 +288,7 @@ local function CreatePanel()
     panel:SetPoint("TOPLEFT", SendMailFrame, "TOPRIGHT", 34, 0)
     panel:SetClampedToScreen(true)
     panel:SetFrameLevel(MailFrame:GetFrameLevel() + 5)
+    panel:Hide()
     panel:SetBackdrop({
         bgFile = "Interface/DialogFrame/UI-DialogBox-Background",
         edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
@@ -353,7 +355,9 @@ local function CreatePanel()
     scrollFrame:SetPoint("TOPLEFT", 98, -91)
     scrollFrame:SetSize(262, VISIBLE_ROWS * ROW_HEIGHT)
     scrollFrame:SetScript("OnVerticalScroll", function(self, offset)
-        FauxScrollFrame_OnVerticalScroll(self, offset, ROW_HEIGHT, MailContacts.Refresh)
+        FauxScrollFrame_OnVerticalScroll(self, offset, ROW_HEIGHT, function()
+            MailContacts.Refresh("scroll")
+        end)
     end)
 
     emptyText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -403,7 +407,9 @@ function MailContacts.TryInstall()
 
     CreatePanel()
     installed = true
-    MailContacts.Refresh()
+    if panel:IsShown() then
+        MailContacts.Refresh("show")
+    end
     return true
 end
 
@@ -413,7 +419,7 @@ end
 
 function MailContacts.Invalidate()
     resultsDirty = true
-    MailContacts.Refresh()
+    MailContacts.Refresh("invalidation")
 end
 
 function MailContacts.UpdateWhoState()
@@ -427,21 +433,32 @@ function MailContacts.UpdateWhoState()
     whoStatusText:SetText(message or "")
 end
 
-function MailContacts.Refresh()
+function MailContacts.Refresh(reason)
     if not installed or not panel or not panel:IsShown() then
         return
     end
 
     local startedAt = ns.Performance and ns.Performance.Start()
     local query = searchBox:GetText() or ""
-    MailContacts.UpdateWhoState()
+    local rebuilt = false
+    if reason ~= "scroll" and reason ~= "search" and reason ~= "tab" then
+        MailContacts.UpdateWhoState()
+    end
     if resultsDirty or query ~= lastQuery or activeTab ~= lastTab then
         visibleResults = ns.Search.Filter(GetRecordsForActiveTab(), query)
+        rebuilt = true
         resultsDirty = false
         lastQuery = query
         lastTab = activeTab
     end
     local offset = FauxScrollFrame_GetOffset(scrollFrame)
+    if not rebuilt and offset == lastRenderedOffset then
+        if ns.Performance then
+            ns.Performance.ContactRefresh(reason, startedAt, false, false)
+        end
+        return
+    end
+    lastRenderedOffset = offset
 
     FauxScrollFrame_Update(scrollFrame, #visibleResults, VISIBLE_ROWS, ROW_HEIGHT)
 
@@ -463,6 +480,6 @@ function MailContacts.Refresh()
         emptyText:Hide()
     end
     if ns.Performance then
-        ns.Performance.Stop("contactsRefresh", startedAt)
+        ns.Performance.ContactRefresh(reason, startedAt, rebuilt, true)
     end
 end

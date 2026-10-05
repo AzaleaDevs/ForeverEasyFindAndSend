@@ -24,6 +24,12 @@ local REPLACEMENTS = {
     { "Ð", "d" }, { "ð", "d" }, { "Þ", "th" }, { "þ", "th" }, { "ß", "ss" },
 }
 
+local REPLACEMENT_BY_CHARACTER = {}
+for index = 1, #REPLACEMENTS do
+    local replacement = REPLACEMENTS[index]
+    REPLACEMENT_BY_CHARACTER[replacement[1]] = replacement[2]
+end
+
 local function Lower(value)
     if type(CaseAccentInsensitiveParse) == "function" then
         return CaseAccentInsensitiveParse(value)
@@ -35,10 +41,7 @@ end
 local function Fold(value)
     local folded = Lower(value)
 
-    for index = 1, #REPLACEMENTS do
-        local replacement = REPLACEMENTS[index]
-        folded = string.gsub(folded, replacement[1], replacement[2])
-    end
+    folded = string.gsub(folded, "[\194-\244][\128-\191]*", REPLACEMENT_BY_CHARACTER)
 
     folded = string.gsub(folded, "%s+", " ")
     folded = string.gsub(folded, "’", "'")
@@ -72,4 +75,9 @@ function Normalizer.Normalize(value)
         compact = Compact(folded),
         tokens = Tokenize(folded),
     }
+end
+
+function Normalizer.NormalizeCompact(value)
+    local original = type(value) == "string" and value or ""
+    return Compact(Fold(original))
 end
