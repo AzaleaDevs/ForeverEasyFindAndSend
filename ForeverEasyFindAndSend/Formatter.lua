@@ -4,15 +4,27 @@ local Formatter = {}
 ns.Formatter = Formatter
 
 function Formatter.GetClassName(record)
-    if type(record.class) ~= "string" or record.class == "" then
-        return nil
+    if type(record.classID) == "number"
+        and C_CreatureInfo
+        and type(C_CreatureInfo.GetClassInfo) == "function" then
+        local classInfo = C_CreatureInfo.GetClassInfo(record.classID)
+        if type(classInfo) == "table" and type(classInfo.className) == "string" and classInfo.className ~= "" then
+            return classInfo.className
+        end
     end
 
-    if string.match(record.class, "^[A-Z]+$") then
-        return string.upper(string.sub(record.class, 1, 1)) .. string.lower(string.sub(record.class, 2))
+    if type(record.classFile) == "string" and record.classFile ~= "" then
+        local localized = LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[record.classFile]
+        if type(localized) == "string" and localized ~= "" then
+            return localized
+        end
     end
 
-    return record.class
+    if type(record.class) == "string" and record.class ~= "" then
+        return record.class
+    end
+
+    return nil
 end
 
 function Formatter.GetMetadata(record, status)

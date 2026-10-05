@@ -1,12 +1,25 @@
 ## Interface: 16001
 ## Title: Forever Easy Find & Send
+## Title-esES: Forever Easy Find & Send
+## Title-esMX: Forever Easy Find & Send
+## Title-frFR: Forever Easy Find & Send
+## Title-deDE: Forever Easy Find & Send
 ## Notes: Character search, mail autocomplete, and contacts for WoW Forever.
+## Notes-esES: Búsqueda de personajes, autocompletado de correo y agenda para WoW Forever.
+## Notes-esMX: Búsqueda de personajes, autocompletado de correo y agenda para WoW Forever.
+## Notes-frFR: Recherche de personnages, saisie automatique du courrier et contacts pour WoW Forever.
+## Notes-deDE: Charaktersuche, Brief-Autovervollständigung und Kontakte für WoW Forever.
 ## Author: Forever Easy Find & Send contributors
-## Version: 0.1.0-alpha.3.1
+## Version: 0.1.0-alpha.4
 ## SavedVariables: ForeverEasyFindAndSendDB, ForeverEasyNamesDB
 ## OptionalDeps: ForeverEasyNames
 
+Localization/enUS.lua
+Localization/esES.lua
+Localization/frFR.lua
+Localization/deDE.lua
 Core.lua
+Performance.lua
 Normalizer.lua
 Formatter.lua
 Database.lua
@@ -14,4 +27,5 @@ Search.lua
 Sources.lua
 Who.lua
 Integrations/Mail.lua
+Integrations/Whisper.lua
 UI/MailContacts.lua

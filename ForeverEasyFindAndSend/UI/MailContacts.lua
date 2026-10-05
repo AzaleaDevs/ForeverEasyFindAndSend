@@ -53,32 +53,32 @@ local function GetGuildStatus(record)
     end
 
     if isOnline then
-        return ONLINE or "Online"
+        return ONLINE or ns.L.ONLINE
     end
 
-    return OFFLINE or "Offline"
+    return OFFLINE or ns.L.OFFLINE
 end
 
 local function GetEmptyMessage(query)
     if query ~= "" then
-        return "No matching characters."
+        return ns.L.NO_MATCHES
     end
 
     if activeTab == "GUILD" then
         local state = ns.Sources.GetState().guild
         if state == "none" then
-            return "This character is not in a guild."
+            return ns.L.NOT_IN_GUILD
         elseif state == "pending" then
-            return "Loading guild roster..."
+            return ns.L.GUILD_LOADING
         elseif state == "unavailable" then
-            return "Guild roster is unavailable in this client."
+            return ns.L.GUILD_UNAVAILABLE
         end
-        return "No guild members available."
+        return ns.L.NO_GUILD_MEMBERS
     elseif activeTab == "FAVORITES" then
-        return "No favorite characters yet."
+        return ns.L.NO_FAVORITES
     end
 
-    return "No known characters yet."
+    return ns.L.NO_KNOWN_CHARACTERS
 end
 
 local function GetRecordsForActiveTab()
@@ -135,6 +135,7 @@ local function UpdateRow(row, result)
         tostring(record.race or ""),
         tostring(record.class or ""),
         tostring(record.classFile or ""),
+        tostring(record.classID or ""),
         tostring(record.favorite == true),
         tostring(guildStatus or ""),
     }, "\031")
@@ -191,7 +192,7 @@ local function CreateRow(index)
     end)
     row.mailButton:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Set mail recipient")
+        GameTooltip:SetText(ns.L.SET_MAIL_RECIPIENT)
         GameTooltip:Show()
     end)
     row.mailButton:SetScript("OnLeave", GameTooltip_Hide)
@@ -210,7 +211,7 @@ local function CreateRow(index)
     end)
     row.favoriteButton:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText(row.record and row.record.favorite and "Remove favorite" or "Add favorite")
+        GameTooltip:SetText(row.record and row.record.favorite and ns.L.REMOVE_FAVORITE or ns.L.ADD_FAVORITE)
         GameTooltip:Show()
     end)
     row.favoriteButton:SetScript("OnLeave", GameTooltip_Hide)
@@ -297,13 +298,13 @@ local function CreatePanel()
 
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOP", 0, -14)
-    title:SetText("FEFS Contacts")
+    title:SetText(ns.L.CONTACTS_TITLE)
 
     searchBox = CreateFrame("EditBox", nil, panel, "SearchBoxTemplate")
     searchBox:SetSize(270, 24)
     searchBox:SetPoint("TOPLEFT", 98, -40)
     if searchBox.Instructions then
-        searchBox.Instructions:SetText(SEARCH or "Search")
+        searchBox.Instructions:SetText(ns.L.SEARCH_PLACEHOLDER)
     end
     searchBox:HookScript("OnTextChanged", ScheduleSearchRefresh)
     searchBox:SetScript("OnEscapePressed", function(self)
@@ -316,7 +317,7 @@ local function CreatePanel()
     onlineSearchButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     onlineSearchButton:SetSize(106, 24)
     onlineSearchButton:SetPoint("TOPLEFT", 262, -40)
-    onlineSearchButton:SetText("Search Online")
+    onlineSearchButton:SetText(ns.L.SEARCH_ONLINE)
     onlineSearchButton:SetScript("OnClick", function()
         if ns.Who then
             ns.Who.Request(searchBox:GetText())
@@ -331,15 +332,15 @@ local function CreatePanel()
 
     panel.tabButtons = {}
     local tabs = {
-        { key = "GENERAL", label = "GENERAL" },
-        { key = "GUILD", label = "GUILD" },
-        { key = "FAVORITES", label = "FAVORITOS" },
+        { key = "GENERAL", label = ns.L.TAB_GENERAL },
+        { key = "GUILD", label = ns.L.TAB_GUILD },
+        { key = "FAVORITES", label = ns.L.TAB_FAVORITES },
     }
     for tabIndex = 1, #tabs do
         local tab = tabs[tabIndex]
         local tabKey = tab.key
         local button = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-        button:SetSize(82, 28)
+        button:SetSize(84, 28)
         button:SetPoint("TOPLEFT", 10, -40 - ((tabIndex - 1) * 32))
         button:SetText(tab.label)
         button:SetScript("OnClick", function()
@@ -427,10 +428,11 @@ function MailContacts.UpdateWhoState()
 end
 
 function MailContacts.Refresh()
-    if not installed or not panel then
+    if not installed or not panel or not panel:IsShown() then
         return
     end
 
+    local startedAt = ns.Performance and ns.Performance.Start()
     local query = searchBox:GetText() or ""
     MailContacts.UpdateWhoState()
     if resultsDirty or query ~= lastQuery or activeTab ~= lastTab then
@@ -459,5 +461,8 @@ function MailContacts.Refresh()
         emptyText:Show()
     else
         emptyText:Hide()
+    end
+    if ns.Performance then
+        ns.Performance.Stop("contactsRefresh", startedAt)
     end
 end

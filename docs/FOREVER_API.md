@@ -47,6 +47,16 @@ The generated Forever FriendList documentation declares:
 
 Forever's own `WhoFrameEditBoxMixin:OnEnterPressed()` calls `C_FriendList.SendWho(text, Enum.SocialWhoOrigin.Social)`. FEFS follows that signature only from the General panel button's click handler. The inspected API and FrameXML expose no cooldown-query function. FEFS therefore allows one pending request, applies a 10-second local minimum interval, times out its UI state after 15 seconds, and never retries automatically.
 
+### Autocomplete, class localization, and profiling inspected for alpha.4
+
+- `AUTOCOMPLETE_LIST.WHISPER` and `AUTOCOMPLETE_LIST.SMART_WHISPER` are configured by `ChatFrameEditBoxBaseMixin:ProcessChatType()`.
+- Chat edit boxes inherit `AutoCompleteEditBoxTemplate`; the native template owns mouse selection, Up/Down, Tab, Enter, and Escape.
+- `ChatFrameEditBoxMixin:OnTextChanged()` passes only the target portion after the slash command to `AutoComplete_Update()`.
+- `ChatFrameEditBoxMixin:OnLoad()` installs the native SMART_WHISPER selection callback and enables highlighted suffix insertion. FEFS securely post-hooks only `ChatFrameEditBoxMixin:ProcessChatType()`, composes the per-edit-box source only for `WHISPER`/`SMART_WHISPER`, preserves the native callback, and disables highlighted suffix insertion only in those contexts.
+- `C_AutoComplete.GetAutoCompleteResults()` remains the native source. FEFS does not replace that global API.
+- `C_CreatureInfo.GetClassInfo(classID)` returns a localized `className`, stable `classFile`, and `classID`. FrameXML also initializes `LOCALIZED_CLASS_NAMES_MALE` and `LOCALIZED_CLASS_NAMES_FEMALE` from client data.
+- Generated `FrameScriptDocumentation.lua` documents `debugprofilestop()` as returning elapsed milliseconds. FEFS uses delta samples without an `OnUpdate` loop and prints them only on `/fefs debug perf`.
+
 ## Alpha.3.1 synchronization policy
 
 - SavedVariables initialize during the addon's `ADDON_LOADED`.
@@ -59,6 +69,13 @@ Forever's own `WhoFrameEditBoxMixin:OnEnterPressed()` calls `C_FriendList.SendWh
 - FEFS consumes `WHO_LIST_UPDATE` only while its own request is pending and stores returned records with the `who` source.
 - Database identity indexes are updated incrementally. Bulk source imports batch consumer invalidation into one search/UI refresh.
 
+## Alpha.4 performance policy
+
+- Repeated `GUILD_ROSTER_UPDATE` events within 250 ms are coalesced into one synchronization with `C_Timer.After`; there is no permanent `OnUpdate`.
+- Guild roster APIs are still traversed once per executed synchronization because Forever exposes no member delta, but unchanged member snapshots skip database upserts and `lastSeen` writes.
+- Mail contacts invalidation remains event-driven, but full filtering/sorting is deferred while the contacts panel is hidden.
+- Search normalization remains precomputed per record, query normalization occurs once per call, database identity indexes remain incremental, and scroll continues to reuse cached results and rows.
+
 All source APIs are checked before use. Missing APIs place that source in an explicit unavailable state.
 
 ## Requires real-client validation
@@ -69,5 +86,7 @@ All source APIs are checked before use. Missing APIs place that source in an exp
 - Class icon texture appearance for every class available in Forever.
 - The timing of the first `FRIENDLIST_UPDATE` and `GUILD_ROSTER_UPDATE` on fresh login.
 - WHO server throttling behavior and result timing. No queryable cooldown was found, so the local interval is deliberately conservative and remains subject to server enforcement.
+- Exact runtime behavior of `/w` aliases, native whisper selection, mouse/keyboard handling, and `hooksecurefunc` in build 70205.
+- Real-client `debugprofilestop()` timing values under a guild near 1,000 members.
 
 FEFS preserves the exact name returned by each source as `actionName`; it does not reconstruct that value from normalized search data.

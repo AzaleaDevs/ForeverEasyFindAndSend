@@ -6,6 +6,26 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0-alpha.4] - 2026-10-05
+
+### Added
+
+- English, Spanish, French, and German localization selected exclusively through `GetLocale()`, with English fallback.
+- Native-dropdown FEFS autocomplete for `WHISPER` and `SMART_WHISPER`, preserving exact `actionName` selection and all native results.
+- `/fefs debug perf` metrics for guild events/synchronizations, search refresh/find/filter work, and visible contacts refreshes.
+- Runtime class-name localization through client-provided class APIs and tables.
+
+### Changed
+
+- Coalesce bursts of `GUILD_ROSTER_UPDATE` for 250 ms and skip guild `Upsert` calls when a member snapshot is unchanged.
+- Avoid filtering and sorting the contacts directory while its panel is hidden.
+- Include the client's localized class name in the in-memory search representation.
+
+### Fixed
+
+- Removed the hardcoded `FEFS Contacts` title and localized all FEFS-owned player-facing strings.
+- Prevented source events from doing hidden mail-panel filtering work.
+
 ## [0.1.0-alpha.3.1] - 2026-10-04
 
 ### Added

@@ -74,6 +74,7 @@ local function BuildEntry(record)
     for fieldIndex = 1, #SEARCH_FIELDS do
         AddSearchValue(values, seen, record[SEARCH_FIELDS[fieldIndex]])
     end
+    AddSearchValue(values, seen, ns.Formatter.GetClassName(record))
     if record.level ~= nil then
         AddSearchValue(values, seen, tostring(record.level))
     end
@@ -142,6 +143,7 @@ local function TrimResults(results, limit)
 end
 
 function Search.Refresh()
+    local startedAt = ns.Performance and ns.Performance.Start()
     wipe(index)
     wipe(byRecord)
 
@@ -153,13 +155,20 @@ function Search.Refresh()
             byRecord[entry.record] = entry
         end
     end
+    if ns.Performance then
+        ns.Performance.Stop("searchRefresh", startedAt, { indexed = #index })
+    end
 end
 
 function Search.Find(text, limit)
+    local startedAt = ns.Performance and ns.Performance.Start()
     local query = ns.Normalizer.Normalize(text)
     local results = {}
 
     if query.compact == "" then
+        if ns.Performance then
+            ns.Performance.Stop("searchFind", startedAt, { scanned = 0, matched = 0 })
+        end
         return results
     end
 
@@ -177,10 +186,14 @@ function Search.Find(text, limit)
 
     SortResults(results)
     TrimResults(results, limit)
+    if ns.Performance then
+        ns.Performance.Stop("searchFind", startedAt, { scanned = #index, matched = #results })
+    end
     return results
 end
 
 function Search.Filter(records, text, limit)
+    local startedAt = ns.Performance and ns.Performance.Start()
     local query = ns.Normalizer.Normalize(text)
     local results = {}
 
@@ -205,6 +218,9 @@ function Search.Filter(records, text, limit)
 
     SortResults(results)
     TrimResults(results, limit)
+    if ns.Performance then
+        ns.Performance.Stop("searchFilter", startedAt, { scanned = #records, matched = #results })
+    end
     return results
 end
 

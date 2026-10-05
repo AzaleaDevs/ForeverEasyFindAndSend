@@ -78,24 +78,24 @@ end
 
 function Who.GetState(query)
     if not APIsAvailable() then
-        return false, "Search Online", "Online search is unavailable in this client."
+        return false, ns.L.SEARCH_ONLINE, ns.L.WHO_UNAVAILABLE
     end
     if pending then
-        return false, "Searching...", statusText
+        return false, ns.L.SEARCHING, statusText
     end
     if Trim(query) == "" then
-        return false, "Search Online", ""
+        return false, ns.L.SEARCH_ONLINE, ""
     end
     if Now() < cooldownUntil then
         if Trim(query) == lastQuery and statusText ~= "" then
-            return false, "Search Online", statusText
+            return false, ns.L.SEARCH_ONLINE, statusText
         end
-        return false, "Search Online", "Online search is temporarily on cooldown."
+        return false, ns.L.SEARCH_ONLINE, ns.L.WHO_COOLDOWN
     end
     if Trim(query) ~= lastQuery then
-        return true, "Search Online", ""
+        return true, ns.L.SEARCH_ONLINE, ""
     end
-    return true, "Search Online", statusText
+    return true, ns.L.SEARCH_ONLINE, statusText
 end
 
 function Who.Request(query)
@@ -110,7 +110,7 @@ function Who.Request(query)
     lastQuery = query
     pending = true
     cooldownUntil = Now() + MIN_REQUEST_INTERVAL
-    statusText = "Searching online..."
+    statusText = ns.L.SEARCHING_ONLINE
     NotifyUI()
 
     local origin = Enum and Enum.SocialWhoOrigin and Enum.SocialWhoOrigin.Social
@@ -123,7 +123,7 @@ function Who.Request(query)
 
     if not succeeded then
         pending = false
-        statusText = "Online search could not be started."
+        statusText = ns.L.WHO_START_FAILED
         lastError = tostring(errorMessage)
         NotifyUI()
         return false, errorMessage
@@ -135,7 +135,7 @@ function Who.Request(query)
         C_Timer.After(REQUEST_TIMEOUT, function()
             if generation == requestGeneration and pending then
                 pending = false
-                statusText = "Online search timed out."
+                statusText = ns.L.WHO_TIMEOUT
                 NotifyUI()
             end
         end)
@@ -183,17 +183,17 @@ function Who.OnEvent(event)
         end
     end)
     if not succeeded then
-        statusText = "Online results could not be processed."
+        statusText = ns.L.WHO_PROCESS_FAILED
         lastError = tostring(errorMessage)
     elseif imported == 0 then
         lastError = nil
-        statusText = "No online results found."
+        statusText = ns.L.WHO_NO_RESULTS
     elseif totalNumWhos > numWhos then
         lastError = nil
-        statusText = string.format("Online search: %d of %d results shown.", imported, totalNumWhos)
+        statusText = string.format(ns.L.WHO_RESULTS_PARTIAL, imported, totalNumWhos)
     else
         lastError = nil
-        statusText = string.format("Online search: %d result(s) found.", imported)
+        statusText = string.format(ns.L.WHO_RESULTS, imported)
     end
 
     ns.Database.RequestRefresh(false)
@@ -202,13 +202,13 @@ end
 
 function Who.PrintDebug()
     ns.Print(string.format(
-        "debug: whoAvailable=%s, whoPending=%s, lastWhoQuery=%q, cooldownRemaining=%.1f",
+        ns.L.DEBUG_WHO,
         tostring(APIsAvailable()),
         tostring(pending),
         lastQuery,
         math.max(0, cooldownUntil - Now())
     ))
     if lastError then
-        ns.Print("debug: last WHO error=" .. lastError)
+        ns.Print(string.format(ns.L.DEBUG_WHO_ERROR, lastError))
     end
 end

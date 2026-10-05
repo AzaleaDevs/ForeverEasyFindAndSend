@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 ns.addonName = addonName
-ns.version = "0.1.0-alpha.3.1"
+ns.version = "0.1.0-alpha.4"
 
 function ns.Print(message)
     print("|cff33ff99[FEFS]|r " .. tostring(message))
@@ -26,6 +26,12 @@ local function TryInstallMailFeatures()
     end
 end
 
+local function TryInstallWhisperFeatures()
+    if ns.Whisper then
+        ns.Whisper.TryInstall()
+    end
+end
+
 eventFrame:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
         local loadedAddonName = ...
@@ -43,6 +49,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
             ns.isLoaded = true
 
             TryInstallMailFeatures()
+            TryInstallWhisperFeatures()
         elseif loadedAddonName == "Blizzard_MailFrame" and ns.isLoaded then
             TryInstallMailFeatures()
         end
@@ -78,11 +85,16 @@ SlashCmdList.FOREVEREASYFINDANDSEND = function(message)
 
     if command == "search" and argument ~= "" then
         local results = ns.Search.Find(argument, 10)
-        ns.Print(string.format("%d result(s) for %q:", #results, argument))
+        ns.Print(string.format(ns.L.CMD_SEARCH_RESULTS, #results, argument))
         for resultIndex = 1, #results do
             local result = results[resultIndex]
-            ns.Print(string.format("%d. %s (score %d)", resultIndex, result.record.actionName, result.score))
+            ns.Print(string.format(ns.L.CMD_SEARCH_RESULT, resultIndex, result.record.actionName, result.score))
         end
+        return
+    end
+
+    if command == "debug" and string.lower(argument or "") == "perf" then
+        ns.Performance.Print()
         return
     end
 
@@ -94,14 +106,16 @@ SlashCmdList.FOREVEREASYFINDANDSEND = function(message)
         return
     end
 
-    local mailStatus = ns.Mail and ns.Mail.IsInstalled() and "installed" or "waiting for Blizzard_MailFrame"
-    local panelStatus = ns.MailContacts and ns.MailContacts.IsInstalled() and "installed" or "waiting for Blizzard_MailFrame"
+    local mailStatus = ns.Mail and ns.Mail.IsInstalled() and ns.L.STATUS_INSTALLED or ns.L.STATUS_WAITING_MAIL
+    local whisperStatus = ns.Whisper and ns.Whisper.IsInstalled() and ns.L.STATUS_INSTALLED or ns.L.STATUS_WAITING_CHAT
+    local panelStatus = ns.MailContacts and ns.MailContacts.IsInstalled() and ns.L.STATUS_INSTALLED or ns.L.STATUS_WAITING_MAIL
     ns.Print(string.format(
-        "%s; schema %s; mail autocomplete %s; contacts panel %s.",
+        ns.L.CMD_STATUS,
         ns.version,
         tostring(ns.Database.GetSchemaVersion()),
         mailStatus,
+        whisperStatus,
         panelStatus
     ))
-    ns.Print("Use /fefs search <name> or /fefs debug.")
+    ns.Print(ns.L.CMD_HELP)
 end

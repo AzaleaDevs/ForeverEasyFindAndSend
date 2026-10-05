@@ -4,6 +4,7 @@ local Sources = {}
 ns.Sources = Sources
 
 local INITIAL_TIMEOUT_SECONDS = 5
+local GUILD_EVENT_DEBOUNCE_SECONDS = 0.25
 
 local states = {
     player = "pending",
@@ -13,11 +14,13 @@ local states = {
 }
 
 local guildEntries = {}
+local guildSnapshot = {}
 local friendCount = 0
 local guildCount = 0
 local initialSyncStarted = false
 local initialSyncFinished = false
 local guildRequestSent = false
+local guildSyncScheduled = false
 
 local function CleanValue(value)
     if value == nil or value == "" then
@@ -148,45 +151,82 @@ local function SyncGroup()
 end
 
 local function SyncGuild()
+    local startedAt = ns.Performance and ns.Performance.Start()
     wipe(guildEntries)
     guildCount = 0
+    local processed = 0
+    local modified = 0
 
     if not IsInGuild() then
+        wipe(guildSnapshot)
         states.guild = "none"
+        if ns.Performance then
+            ns.Performance.Stop("guild", startedAt, { processed = 0, modified = 0 })
+        end
         return
     end
 
     if type(GetNumGuildMembers) ~= "function" or type(GetGuildRosterInfo) ~= "function" then
         states.guild = "unavailable"
+        if ns.Performance then
+            ns.Performance.Stop("guild", startedAt, { processed = 0, modified = 0 })
+        end
         return
     end
 
     local memberCount = GetNumGuildMembers() or 0
     if memberCount == 0 then
         states.guild = "pending"
+        if ns.Performance then
+            ns.Performance.Stop("guild", startedAt, { processed = 0, modified = 0 })
+        end
         return
     end
 
+    local nextSnapshot = {}
     for memberIndex = 1, memberCount do
         local name, _, _, level, className, _, _, _, isOnline, _, classFile, _, _, _, _, _, guid =
             GetGuildRosterInfo(memberIndex)
 
         name = CleanValue(name)
         if name then
-            local firstName, surname = SplitName(name)
-            local character = ns.Database.Upsert({
-                actionName = name,
-                displayName = name,
-                firstName = firstName,
-                surname = surname,
-                guid = CleanValue(guid),
-                level = level and level > 0 and level or nil,
-                class = CleanValue(className),
-                classFile = CleanValue(classFile),
-                source = "guild",
-            })
+            processed = processed + 1
+            guid = CleanValue(guid)
+            className = CleanValue(className)
+            classFile = CleanValue(classFile)
+            level = level and level > 0 and level or nil
+            local identity = guid or name
+            local signature = table.concat({
+                name,
+                tostring(guid or ""),
+                tostring(level or ""),
+                tostring(className or ""),
+                tostring(classFile or ""),
+                tostring(isOnline == true),
+            }, "\031")
+            local previous = guildSnapshot[identity]
+            local character = previous and previous.signature == signature and previous.record
+
+            if not character then
+                local firstName, surname = SplitName(name)
+                character = ns.Database.Upsert({
+                    actionName = name,
+                    displayName = name,
+                    firstName = firstName,
+                    surname = surname,
+                    guid = guid,
+                    level = level,
+                    class = className,
+                    classFile = classFile,
+                    source = "guild",
+                })
+                if character then
+                    modified = modified + 1
+                end
+            end
 
             if character then
+                nextSnapshot[identity] = { signature = signature, record = character }
                 guildEntries[#guildEntries + 1] = {
                     record = character,
                     isOnline = isOnline == true,
@@ -196,31 +236,35 @@ local function SyncGuild()
         end
     end
 
+    guildSnapshot = nextSnapshot
     states.guild = "available"
+    if ns.Performance then
+        ns.Performance.Stop("guild", startedAt, { processed = processed, modified = modified })
+    end
 end
 
 local function GuildSummary()
     if states.guild == "available" then
-        return string.format("%d hermandad", guildCount)
+        return string.format(ns.L.GUILD_COUNT, guildCount)
     elseif states.guild == "none" then
-        return "sin hermandad"
+        return ns.L.NO_GUILD
     elseif states.guild == "unavailable" then
-        return "hermandad no disponible"
+        return ns.L.GUILD_UNAVAILABLE
     end
 
-    return "hermandad pendiente"
+    return ns.L.GUILD_PENDING
 end
 
 local function ContactsSummary(stats)
     local unavailable = {}
     if states.player == "unavailable" then
-        unavailable[#unavailable + 1] = "jugador no disponible"
+        unavailable[#unavailable + 1] = ns.L.PLAYER_UNAVAILABLE
     end
     if states.friends == "unavailable" then
-        unavailable[#unavailable + 1] = "amigos no disponibles"
+        unavailable[#unavailable + 1] = ns.L.FRIENDS_UNAVAILABLE
     end
 
-    local summary = string.format("%d contactos", stats.contacts)
+    local summary = string.format(ns.L.CONTACTS_COUNT, stats.contacts)
     if #unavailable > 0 then
         summary = string.format("%s (%s)", summary, table.concat(unavailable, ", "))
     end
@@ -236,7 +280,7 @@ local function FinishInitialSync()
     initialSyncFinished = true
     local stats = ns.Database.GetStats()
     ns.Print(string.format(
-        "Listo: %s · %s · %d favoritos.",
+        ns.L.READY_SUMMARY,
         ContactsSummary(stats),
         GuildSummary(),
         stats.favorites
@@ -274,7 +318,7 @@ function Sources.StartInitialSync()
     end
 
     initialSyncStarted = true
-    ns.Print("Cargando información de jugadores...")
+    ns.Print(ns.L.LOADING_PLAYERS)
 
     RunBatch(function()
         SyncPlayer()
@@ -304,14 +348,36 @@ function Sources.StartInitialSync()
 end
 
 function Sources.OnEvent(event, ...)
+    if event == "GUILD_ROSTER_UPDATE" then
+        local coalesced = guildSyncScheduled
+        if ns.Performance then
+            ns.Performance.GuildEvent(coalesced)
+        end
+        if coalesced then
+            return
+        end
+
+        guildSyncScheduled = true
+        local function RunGuildSync()
+            guildSyncScheduled = false
+            RunBatch(function()
+                SyncGuild()
+                MaybeFinishInitialSync()
+            end)
+        end
+        if C_Timer and type(C_Timer.After) == "function" then
+            C_Timer.After(GUILD_EVENT_DEBOUNCE_SECONDS, RunGuildSync)
+        else
+            RunGuildSync()
+        end
+        return
+    end
+
     RunBatch(function()
         if event == "FRIENDLIST_UPDATE" then
             SyncFriends()
         elseif event == "GROUP_ROSTER_UPDATE" then
             SyncGroup()
-        elseif event == "GUILD_ROSTER_UPDATE" then
-            SyncGuild()
-            MaybeFinishInitialSync()
         elseif event == "PLAYER_GUILD_UPDATE" then
             guildRequestSent = false
             SyncGuild()
@@ -335,7 +401,7 @@ end
 
 function Sources.PrintDebug()
     ns.Print(string.format(
-        "debug: player=%s, friends=%s (%d), guild=%s (%d), group=%s",
+        ns.L.DEBUG_SOURCES,
         states.player,
         states.friends,
         friendCount,

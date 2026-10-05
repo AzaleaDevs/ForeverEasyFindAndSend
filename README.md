@@ -4,12 +4,13 @@ Forever Easy Find & Send (FEFS) is a World of Warcraft: Forever addon for findin
 
 ## Development status
 
-The project is in early alpha development and targets **WoW Forever 1.60.1 build 70205** (`Interface 16001`). Version `0.1.0-alpha.3.1` is intended for local testing and is not a stable release.
+The project is in early alpha development and targets **WoW Forever 1.60.1 build 70205** (`Interface 16001`). Version `0.1.0-alpha.4` is intended for local testing and is not a stable release.
 
 ## Alpha features
 
 - Accent-insensitive and separator-tolerant character name search.
 - Search-as-you-type mail autocomplete that never replaces the typed query automatically.
+- Native whisper autocomplete enrichment for `/w`, with exact recipient selection and no automatic message sending.
 - Exact `actionName` insertion only after an explicit native-dropdown selection.
 - Native autocomplete results remain available and are deduplicated against FEFS results.
 - A shared account-wide character directory stored in SavedVariables.
@@ -21,6 +22,7 @@ The project is in early alpha development and targets **WoW Forever 1.60.1 build
 - Explicit, user-initiated WHO discovery from General through **Search Online**.
 - Persistent favorites that do not remove characters from the general directory.
 - Class colors and client-provided class icon resources when class metadata is available.
+- Localized FEFS interface and messages for English, Spanish, French, and German clients.
 
 FEFS never sends mail automatically and never issues automatic WHO queries. Online discovery runs only when the user clicks **Search Online**.
 
@@ -56,7 +58,7 @@ Open the Send Mail tab to use the contacts panel:
 - **GENERAL** lists characters known to FEFS.
 - **Search Online** in General submits the current text to WHO only when clicked, then imports legitimate results into the shared local directory.
 - **GUILD** lists the current guild roster and its online state.
-- **FAVORITOS** lists persistent starred characters.
+- **FAVORITES** (localized by the client language) lists persistent starred characters.
 - The envelope button places only the exact character `actionName` in the recipient field.
 - The star button adds or removes a favorite immediately.
 - The side toggle collapses or expands the panel.
@@ -68,6 +70,13 @@ Commands:
 - `/fefs` or `/fefs status`: version, schema, and mail integration state.
 - `/fefs search <text>`: inspect autocomplete search results.
 - `/fefs debug`: print per-source synchronization states and counts.
+- `/fefs debug perf`: print lightweight in-memory timing and guild-event metrics.
+
+Start a whisper with `/w <query>`. FEFS suggestions appear first in Forever's native autocomplete dropdown and include metadata for recognition. Selecting one changes the chat editor to a whisper addressed to the exact `actionName`; FEFS never sends the message.
+
+## Localization
+
+FEFS uses `GetLocale()` and loads English fallback strings before all consuming modules. `enUS` and `enGB` use English, `esES` and `esMX` use Spanish, `frFR` uses French, and `deDE` uses German. Class names are resolved at presentation time from the client's `C_CreatureInfo.GetClassInfo(classID)` or `LOCALIZED_CLASS_NAMES_MALE[classFile]`, with the stored source string retained only as fallback.
 
 ## Development fixtures
 
@@ -87,7 +96,7 @@ All data remains local in `ForeverEasyFindAndSendDB`. FEFS has no external serve
 
 ## Known limitations
 
-- Forever 1.60.1 is still evolving; alpha.3.1 requires validation in build 70205.
+- Forever 1.60.1 is still evolving; alpha.4 requires validation in build 70205.
 - Friends and guild APIs do not expose every metadata field. Unknown race, class, level, or GUID values are omitted rather than inferred.
 - Guild online state belongs to the current runtime roster and is not persisted as character identity data.
 - Native autocomplete entries only show metadata when the same exact action name is known to FEFS.
@@ -96,7 +105,8 @@ All data remains local in `ForeverEasyFindAndSendDB`. FEFS has no external serve
 - Legacy SavedVariables migration requires one bridge session with both addon folders enabled.
 - WHO is server-limited and may return only a subset of matching online characters. FEFS does not enumerate the server or retry automatically.
 - Forever exposes no documented WHO cooldown query in the inspected API, so FEFS applies a conservative local interval in addition to server restrictions.
-- Chat learning, whisper learning, and global server enumeration are not implemented.
+- Whisper completion uses only FEFS's existing local directory; chat learning, automatic WHO, and global server enumeration are not implemented.
+- Native whisper behavior, translated layout widths, and performance timings require validation in the real client.
 
 ## Compatibility research
 
