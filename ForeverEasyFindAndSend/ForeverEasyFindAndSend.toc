@@ -9,7 +9,7 @@
 ## Notes-esMX: Búsqueda de personajes, autocompletado de correo y agenda para WoW Forever.
 ## Notes-frFR: Recherche de personnages, saisie automatique du courrier et contacts pour WoW Forever.
 ## Notes-deDE: Charaktersuche, Brief-Autovervollständigung und Kontakte für WoW Forever.
-## IconTexture: Interface\AddOns\ForeverEasyFindAndSend\Media\Icon
+## IconTexture: Interface\AddOns\ForeverEasyFindAndSend\Media\Icon.png
 ## Author: Forever Easy Find & Send contributors
 ## Version: 0.1.0-alpha.4
 ## SavedVariables: ForeverEasyFindAndSendDB, ForeverEasyNamesDB
