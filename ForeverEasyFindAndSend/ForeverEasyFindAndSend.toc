@@ -28,5 +28,6 @@ Search.lua
 Sources.lua
 Who.lua
 Integrations/Mail.lua
+UI/WhisperSuggestions.lua
 Integrations/Whisper.lua
 UI/MailContacts.lua

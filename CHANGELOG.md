@@ -11,6 +11,7 @@ The project follows [Semantic Versioning](https://semver.org/).
 - Use the compact `GUILD` tab label in every supported locale.
 - Reduce search-index rebuild work with single-pass UTF-8 folding, refresh-local normalization reuse, and cached localized class names.
 - Separate contacts dataset/render metrics and skip repeated scroll callbacks that remain on the same logical row.
+- Replace whisper-result injection with a compact FEFS suggestion popup that leaves Forever's native autocomplete intact.
 
 ## [0.1.0-alpha.4] - 2026-10-05
 
