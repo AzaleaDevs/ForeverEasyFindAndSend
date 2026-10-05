@@ -21,6 +21,16 @@ end
 
 local function CreateCombinedSource(nativeSource)
     return function(text, maxResults, cursorPosition, allowFullMatch, ...)
+        -- ChatFrameEditBoxMixin:OnChar asks for one result with
+        -- allowFullMatch=false and writes that result's name into the edit box.
+        -- FEFS uses name for its enriched dropdown label, so participating in
+        -- that private lookup would replace the user's query with metadata.
+        -- Keep Forever's native inline completion intact and add FEFS only to
+        -- the normal dropdown query made by AutoComplete_Update.
+        if maxResults == 1 and allowFullMatch == false then
+            return nativeSource(text, maxResults, cursorPosition, allowFullMatch, ...)
+        end
+
         local limit = type(maxResults) == "number" and maxResults or 6
         local combined = {}
         local seenNames = {}
