@@ -56,6 +56,8 @@ local function CreateRow(rowIndex)
     local row = CreateFrame("Button", nil, panel)
     row:SetSize(PANEL_WIDTH - (PANEL_PADDING * 2), ROW_HEIGHT)
     row:SetPoint("TOPLEFT", PANEL_PADDING, -PANEL_PADDING - ((rowIndex - 1) * ROW_HEIGHT))
+    row:EnableMouse(true)
+    row:RegisterForClicks("LeftButtonDown")
 
     row.selection = row:CreateTexture(nil, "BACKGROUND")
     row.selection:SetAllPoints()
@@ -78,11 +80,10 @@ local function CreateRow(rowIndex)
     row.metadata:SetTextColor(0.7, 0.7, 0.7)
 
     row:SetScript("OnEnter", function()
-        selectedIndex = rowIndex
-        UpdateHighlights()
+        WhisperSuggestions.SetSelectedIndex(activeEditBox, rowIndex)
     end)
     row:SetScript("OnClick", function()
-        SelectRow(rowIndex)
+        WhisperSuggestions.SelectIndex(activeEditBox, rowIndex)
     end)
     rows[rowIndex] = row
 end
@@ -179,19 +180,42 @@ function WhisperSuggestions.IsShownFor(editBox)
     return panel and panel:IsShown() and activeEditBox == editBox
 end
 
+function WhisperSuggestions.GetSelectedIndex()
+    return selectedIndex
+end
+
+function WhisperSuggestions.SetSelectedIndex(editBox, rowIndex)
+    if not WhisperSuggestions.IsShownFor(editBox)
+        or type(rowIndex) ~= "number"
+        or not results[rowIndex] then
+        return false
+    end
+    selectedIndex = rowIndex
+    UpdateHighlights()
+    return true
+end
+
+function WhisperSuggestions.SelectIndex(editBox, rowIndex)
+    if not WhisperSuggestions.SetSelectedIndex(editBox, rowIndex) then
+        return false
+    end
+    SelectRow(rowIndex)
+    return true
+end
+
 function WhisperSuggestions.MoveSelection(editBox, direction)
     if not WhisperSuggestions.IsShownFor(editBox) or #results == 0 then
         return false
     end
-    selectedIndex = ((selectedIndex - 1 + direction) % #results) + 1
-    UpdateHighlights()
-    return true
+    return WhisperSuggestions.SetSelectedIndex(
+        editBox,
+        ((selectedIndex - 1 + direction) % #results) + 1
+    )
 end
 
 function WhisperSuggestions.Select(editBox)
     if not WhisperSuggestions.IsShownFor(editBox) then
         return false
     end
-    SelectRow(selectedIndex)
-    return true
+    return WhisperSuggestions.SelectIndex(editBox, selectedIndex)
 end

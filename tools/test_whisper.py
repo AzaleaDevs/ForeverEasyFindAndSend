@@ -40,6 +40,10 @@ lua.execute(
     function editBox:SetText(value) self.text = value end
     function editBox:UpdateHeader() self.headerUpdated = true end
     function editBox:SetFocus() self.focused = true end
+    function editBox:GetPropagateKeyboardInput() return self.propagateKeyboard ~= false end
+    function editBox:SetPropagateKeyboardInput(value) self.propagateKeyboard = value end
+    nativeKeyDownCalls = 0
+    editBox.scripts.OnKeyDown = function() nativeKeyDownCalls = nativeKeyDownCalls + 1 end
     chatFrame = { editBox = editBox }
     ChatFrame1 = chatFrame
     CHAT_FRAMES = { "ChatFrame1" }
@@ -112,8 +116,11 @@ assert g.nativeHideCalls == 1
 assert g.editBox.autoCompleteSource()[1].name == "Native Player"
 assert g.editBox.customAutoCompleteFunction() is False
 
-g.editBox.scripts.OnArrowPressed(g.editBox, "DOWN")
-g.editBox.scripts.OnArrowPressed(g.editBox, "UP")
+g.editBox.scripts.OnKeyDown(g.editBox, "DOWN")
+assert g.editBox.propagateKeyboard is False
+g.editBox.scripts.OnKeyUp(g.editBox, "DOWN")
+assert g.editBox.propagateKeyboard is True
+g.editBox.scripts.OnKeyDown(g.editBox, "UP")
 assert popup_state["moves"] == [1, -1]
 g.editBox.scripts.OnTabPressed(g.editBox)
 g.editBox.scripts.OnEnterPressed(g.editBox)
@@ -127,8 +134,104 @@ assert g.editBox.text == ""
 assert g.editBox.headerUpdated is True
 assert g.editBox.focused is True
 
+g.editBox.text = "/w zoo"
+g.editBox.hooks.OnTextChanged(g.editBox, True)
+assert popup_state["shown"]
+g.editBox.scripts.OnEscapePressed(g.editBox)
+assert not popup_state["shown"]
+assert g.editBox.text == "/w zoo"
+
 g.editBox.text = "/party zoo"
 g.editBox.hooks.OnTextChanged(g.editBox, True)
 assert not popup_state["shown"]
+g.editBox.scripts.OnKeyDown(g.editBox, "DOWN")
+assert g.nativeKeyDownCalls == 1
+assert g.editBox.propagateKeyboard is True
 
 print("whisper popup integration checks passed")
+
+# Exercise the real popup selection, hover, click, and wrap logic with frame mocks.
+ui_lua = LuaRuntime(unpack_returned_tuples=True)
+ui_lua.execute(
+    """
+    function wipe(target) for key in pairs(target) do target[key] = nil end return target end
+    UIParent = { GetHeight = function() return 1080 end }
+    CLASS_ICON_TCOORDS = { DRUID = { 0, 0.25, 0, 0.25 } }
+    RAID_CLASS_COLORS = { DRUID = { r = 1, g = 0.5, b = 0 } }
+    createdButtons = {}
+    local function Region()
+        return setmetatable({}, { __index = function() return function() end end })
+    end
+    local FrameMethods = {}
+    function FrameMethods:SetSize() end
+    function FrameMethods:SetHeight() end
+    function FrameMethods:SetPoint() end
+    function FrameMethods:ClearAllPoints() end
+    function FrameMethods:SetFrameStrata() end
+    function FrameMethods:SetClampedToScreen() end
+    function FrameMethods:SetBackdrop() end
+    function FrameMethods:EnableMouse(value) self.mouseEnabled = value end
+    function FrameMethods:RegisterForClicks(...) self.registeredClicks = { ... } end
+    function FrameMethods:CreateTexture() return Region() end
+    function FrameMethods:CreateFontString() return Region() end
+    function FrameMethods:SetScript(name, callback) self.scripts[name] = callback end
+    function FrameMethods:Show() self.shown = true end
+    function FrameMethods:Hide() self.shown = false end
+    function FrameMethods:IsShown() return self.shown == true end
+    function CreateFrame(frameType, name)
+        local frame = setmetatable({ shown = true, scripts = {} }, { __index = FrameMethods })
+        if name then _G[name] = frame end
+        if frameType == "Button" then createdButtons[#createdButtons + 1] = frame end
+        return frame
+    end
+    popupEditBox = { GetTop = function() return 100 end }
+    """
+)
+ui_ns = ui_lua.table()
+ui_ns.Formatter = ui_lua.table_from({"GetMetadata": lambda record_value: f"{record_value.level} · Druid"})
+ui_lua.execute(
+    (root / "ForeverEasyFindAndSend/UI/WhisperSuggestions.lua").read_text(encoding="utf-8"),
+    "ForeverEasyFindAndSend",
+    ui_ns,
+)
+ui_records = []
+ui_results = []
+for index in range(1, 6):
+    ui_record = ui_lua.table_from(
+        {"actionName": f"Player {index}", "displayName": f"Player {index}", "level": index, "classFile": "DRUID"}
+    )
+    ui_records.append(ui_record)
+    ui_results.append(ui_lua.table_from({"record": ui_record}))
+
+selected_records = []
+ui_lua.globals().pySelect = lambda selected_record: selected_records.append(selected_record)
+ui_ns.WhisperSuggestions.SetSelectionHandler(ui_lua.eval("function(_, record) pySelect(record) end"))
+assert ui_ns.WhisperSuggestions.Show(ui_lua.globals().popupEditBox, ui_lua.table_from(ui_results))
+assert ui_ns.WhisperSuggestions.GetSelectedIndex() == 1
+assert len(ui_lua.globals().createdButtons) == 5
+for row_index in range(1, 6):
+    row = ui_lua.globals().createdButtons[row_index]
+    assert row.mouseEnabled is True
+    assert row.registeredClicks[1] == "LeftButtonDown"
+
+ui_ns.WhisperSuggestions.MoveSelection(ui_lua.globals().popupEditBox, 1)
+ui_ns.WhisperSuggestions.MoveSelection(ui_lua.globals().popupEditBox, 1)
+ui_ns.WhisperSuggestions.MoveSelection(ui_lua.globals().popupEditBox, -1)
+assert ui_ns.WhisperSuggestions.GetSelectedIndex() == 2
+ui_ns.WhisperSuggestions.SetSelectedIndex(ui_lua.globals().popupEditBox, 5)
+ui_ns.WhisperSuggestions.MoveSelection(ui_lua.globals().popupEditBox, 1)
+assert ui_ns.WhisperSuggestions.GetSelectedIndex() == 1
+ui_ns.WhisperSuggestions.MoveSelection(ui_lua.globals().popupEditBox, -1)
+assert ui_ns.WhisperSuggestions.GetSelectedIndex() == 5
+
+ui_lua.globals().createdButtons[4].scripts.OnEnter()
+assert ui_ns.WhisperSuggestions.GetSelectedIndex() == 4
+ui_lua.globals().createdButtons[4].scripts.OnClick()
+assert selected_records[-1].actionName == "Player 4"
+
+ui_lua.globals().createdButtons[2].scripts.OnEnter()
+ui_ns.WhisperSuggestions.Select(ui_lua.globals().popupEditBox)
+assert selected_records[-1].actionName == "Player 2"
+assert ui_ns.WhisperSuggestions.GetSelectedIndex() == 2
+
+print("whisper popup UI checks passed")

@@ -13,6 +13,11 @@ The project follows [Semantic Versioning](https://semver.org/).
 - Separate contacts dataset/render metrics and skip repeated scroll callbacks that remain on the same logical row.
 - Replace whisper-result injection with a compact FEFS suggestion popup that leaves Forever's native autocomplete intact.
 
+### Fixed
+
+- Make whisper suggestion rows select on mouse-down before chat focus loss hides the popup.
+- Capture Up/Down only while the FEFS whisper popup is visible and restore normal keyboard propagation immediately afterward.
+
 ## [0.1.0-alpha.4] - 2026-10-05
 
 ### Added
