@@ -7,7 +7,7 @@ end
 local L = ns.L
 L.CONTACTS_TITLE = "Contacts"
 L.TAB_GENERAL = "GÉNÉRAL"
-L.TAB_GUILD = "GUILDE"
+L.TAB_GUILD = "GUILD"
 L.TAB_FAVORITES = "FAVORIS"
 L.SEARCH_PLACEHOLDER = "Rechercher"
 L.SEARCH_ONLINE = "Rechercher en ligne"
