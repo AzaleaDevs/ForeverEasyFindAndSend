@@ -156,15 +156,15 @@ function Search.Refresh()
     wipe(index)
     wipe(byRecord)
 
-    local recordsStartedAt = ns.Performance and ns.Performance.Start()
+    local recordsStartedAt = startedAt and ns.Performance.Start()
     local records = ns.Database.GetSearchRecords()
-    local recordsElapsed = ns.Performance and ns.Performance.Elapsed(recordsStartedAt) or 0
-    local classesStartedAt = ns.Performance and ns.Performance.Start()
+    local recordsElapsed = recordsStartedAt and ns.Performance.Elapsed(recordsStartedAt) or 0
+    local classesStartedAt = startedAt and ns.Performance.Start()
     for recordIndex = 1, #records do
         ns.Formatter.GetClassName(records[recordIndex])
     end
-    local classesElapsed = ns.Performance and ns.Performance.Elapsed(classesStartedAt) or 0
-    local buildStartedAt = ns.Performance and ns.Performance.Start()
+    local classesElapsed = classesStartedAt and ns.Performance.Elapsed(classesStartedAt) or 0
+    local buildStartedAt = startedAt and ns.Performance.Start()
     local normalizedValues = {}
     local stats = { normalized = 0, cacheHits = 0 }
     for recordIndex = 1, #records do
@@ -174,9 +174,9 @@ function Search.Refresh()
             byRecord[entry.record] = entry
         end
     end
-    local buildElapsed = ns.Performance and ns.Performance.Elapsed(buildStartedAt) or 0
-    if ns.Performance then
-        ns.Performance.Stop("searchRefresh", startedAt, {
+    local buildElapsed = buildStartedAt and ns.Performance.Elapsed(buildStartedAt) or 0
+    if startedAt then
+        ns.Performance.Stop("Search.Refresh", startedAt, {
             indexed = #index,
             records = recordsElapsed,
             classes = classesElapsed,
@@ -193,8 +193,8 @@ function Search.Find(text, limit)
     local results = {}
 
     if query.compact == "" then
-        if ns.Performance then
-            ns.Performance.Stop("searchFind", startedAt, { scanned = 0, matched = 0 })
+        if startedAt then
+            ns.Performance.Stop("Search.Find", startedAt, { scanned = 0, matched = 0 })
         end
         return results
     end
@@ -213,8 +213,8 @@ function Search.Find(text, limit)
 
     SortResults(results)
     TrimResults(results, limit)
-    if ns.Performance then
-        ns.Performance.Stop("searchFind", startedAt, { scanned = #index, matched = #results })
+    if startedAt then
+        ns.Performance.Stop("Search.Find", startedAt, { scanned = #index, matched = #results })
     end
     return results
 end
@@ -245,8 +245,8 @@ function Search.Filter(records, text, limit)
 
     SortResults(results)
     TrimResults(results, limit)
-    if ns.Performance then
-        ns.Performance.Stop("searchFilter", startedAt, { scanned = #records, matched = #results })
+    if startedAt then
+        ns.Performance.Stop("Search.Filter", startedAt, { scanned = #records, matched = #results })
     end
     return results
 end

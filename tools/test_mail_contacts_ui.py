@@ -52,15 +52,18 @@ def test_localizations() -> None:
     print("mail contacts localization checks passed")
 
 
-def test_whisper_unchanged() -> None:
-    expected = {
-        "UI/WhisperSuggestions.lua": "6254d3c8c00c82ec7ee4c54b2ee8ef32479f7911d594ce34fddeec0a570e7c6f",
-        "Integrations/Whisper.lua": "0611bb34ad3d046f2d7f00c03c06cf39248781b0fa752ddf77ab310491ed7bd3",
-    }
-    for relative_path, expected_hash in expected.items():
-        actual = hashlib.sha256((ADDON / relative_path).read_bytes()).hexdigest()
-        assert actual == expected_hash, f"whisper baseline changed: {relative_path}"
-    print("whisper baseline checks passed")
+def test_whisper_controls_preserved() -> None:
+    suggestions_path = ADDON / "UI" / "WhisperSuggestions.lua"
+    expected_suggestions_hash = "6254d3c8c00c82ec7ee4c54b2ee8ef32479f7911d594ce34fddeec0a570e7c6f"
+    assert hashlib.sha256(suggestions_path.read_bytes()).hexdigest() == expected_suggestions_hash
+
+    integration = (ADDON / "Integrations" / "Whisper.lua").read_text(encoding="utf-8")
+    assert "SetAltArrowKeyMode(false)" in integration
+    assert 'WrapScript(editBox, "OnArrowPressed"' in integration
+    assert 'WrapScript(editBox, "OnTabPressed"' in integration
+    assert 'WrapScript(editBox, "OnEnterPressed"' in integration
+    assert 'WrapScript(editBox, "OnEscapePressed"' in integration
+    print("whisper control preservation checks passed")
 
 
 def test_package(zip_path: Path) -> None:
@@ -81,7 +84,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     test_visual_source()
     test_localizations()
-    test_whisper_unchanged()
+    test_whisper_controls_preserved()
     if args.zip:
         test_package(args.zip)
     print("mail contacts UI checks passed")

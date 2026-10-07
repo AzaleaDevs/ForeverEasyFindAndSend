@@ -22,6 +22,13 @@ local initialSyncFinished = false
 local guildRequestSent = false
 local guildSyncScheduled = false
 
+local EVENT_OPERATION = {
+    FRIENDLIST_UPDATE = "Sources.FriendsEvent",
+    GROUP_ROSTER_UPDATE = "Sources.GroupEvent",
+    PLAYER_GUILD_UPDATE = "Sources.PlayerGuildEvent",
+    PLAYER_ENTERING_WORLD = "Sources.EnteringWorldEvent",
+}
+
 local function CleanValue(value)
     if value == nil or value == "" then
         return nil
@@ -50,14 +57,24 @@ local function SplitName(actionName)
     return CleanValue(firstName), CleanValue(surname)
 end
 
-local function RunBatch(callback)
+local function RunBatch(operation, callback)
+    local startedAt = ns.Performance and ns.Performance.Start()
     ns.Database.BeginBatch()
-    local succeeded, errorMessage = pcall(callback)
+    local succeeded, result1, result2 = pcall(callback)
     ns.Database.RequestRefresh(false)
     ns.Database.EndBatch()
 
+    if startedAt then
+        local fields = { succeeded = succeeded }
+        if operation == "Sources.GuildSync" then
+            fields.processed = result1 or 0
+            fields.modified = result2 or 0
+        end
+        ns.Performance.Stop(operation, startedAt, fields)
+    end
+
     if not succeeded then
-        error(errorMessage, 0)
+        error(result1, 0)
     end
 end
 
@@ -92,15 +109,23 @@ local function UpsertUnit(unit, source)
 end
 
 local function SyncPlayer()
+    local startedAt = ns.Performance and ns.Performance.Start()
     states.player = UpsertUnit("player", "player") and "available" or "unavailable"
+    if startedAt then
+        ns.Performance.Stop("Sources.PlayerSync", startedAt, { state = states.player })
+    end
 end
 
 local function SyncFriends()
+    local startedAt = ns.Performance and ns.Performance.Start()
     if not C_FriendList
         or type(C_FriendList.GetNumFriends) ~= "function"
         or type(C_FriendList.GetFriendInfoByIndex) ~= "function" then
         states.friends = "unavailable"
         friendCount = 0
+        if startedAt then
+            ns.Performance.Stop("Sources.FriendsSync", startedAt, { processed = 0, state = states.friends })
+        end
         return
     end
 
@@ -129,9 +154,17 @@ local function SyncFriends()
 
     friendCount = processed
     states.friends = "available"
+    if startedAt then
+        ns.Performance.Stop("Sources.FriendsSync", startedAt, {
+            available = count,
+            processed = processed,
+            state = states.friends,
+        })
+    end
 end
 
 local function SyncGroup()
+    local startedAt = ns.Performance and ns.Performance.Start()
     states.group = "available"
     UpsertUnit("player", "player")
 
@@ -148,6 +181,9 @@ local function SyncGroup()
     for memberIndex = 1, count do
         UpsertUnit(prefix .. memberIndex, "group")
     end
+    if startedAt then
+        ns.Performance.Stop("Sources.GroupSync", startedAt, { members = count })
+    end
 end
 
 local function SyncGuild()
@@ -160,27 +196,27 @@ local function SyncGuild()
     if not IsInGuild() then
         wipe(guildSnapshot)
         states.guild = "none"
-        if ns.Performance then
-            ns.Performance.Stop("guild", startedAt, { processed = 0, modified = 0 })
+        if startedAt then
+            ns.Performance.Stop("Sources.GuildScan", startedAt, { processed = 0, modified = 0, state = states.guild })
         end
-        return
+        return 0, 0
     end
 
     if type(GetNumGuildMembers) ~= "function" or type(GetGuildRosterInfo) ~= "function" then
         states.guild = "unavailable"
-        if ns.Performance then
-            ns.Performance.Stop("guild", startedAt, { processed = 0, modified = 0 })
+        if startedAt then
+            ns.Performance.Stop("Sources.GuildScan", startedAt, { processed = 0, modified = 0, state = states.guild })
         end
-        return
+        return 0, 0
     end
 
     local memberCount = GetNumGuildMembers() or 0
     if memberCount == 0 then
         states.guild = "pending"
-        if ns.Performance then
-            ns.Performance.Stop("guild", startedAt, { processed = 0, modified = 0 })
+        if startedAt then
+            ns.Performance.Stop("Sources.GuildScan", startedAt, { processed = 0, modified = 0, state = states.guild })
         end
-        return
+        return 0, 0
     end
 
     local nextSnapshot = {}
@@ -238,9 +274,15 @@ local function SyncGuild()
 
     guildSnapshot = nextSnapshot
     states.guild = "available"
-    if ns.Performance then
-        ns.Performance.Stop("guild", startedAt, { processed = processed, modified = modified })
+    if startedAt then
+        ns.Performance.Stop("Sources.GuildScan", startedAt, {
+            members = memberCount,
+            processed = processed,
+            modified = modified,
+            state = states.guild,
+        })
     end
+    return processed, modified
 end
 
 local function GuildSummary()
@@ -320,7 +362,7 @@ function Sources.StartInitialSync()
     initialSyncStarted = true
     ns.Print(ns.L.LOADING_PLAYERS)
 
-    RunBatch(function()
+    RunBatch("Sources.InitialSync", function()
         SyncPlayer()
 
         if C_FriendList and type(C_FriendList.ShowFriends) == "function" then
@@ -360,9 +402,10 @@ function Sources.OnEvent(event, ...)
         guildSyncScheduled = true
         local function RunGuildSync()
             guildSyncScheduled = false
-            RunBatch(function()
-                SyncGuild()
+            RunBatch("Sources.GuildSync", function()
+                local processed, modified = SyncGuild()
                 MaybeFinishInitialSync()
+                return processed, modified
             end)
         end
         if C_Timer and type(C_Timer.After) == "function" then
@@ -373,7 +416,7 @@ function Sources.OnEvent(event, ...)
         return
     end
 
-    RunBatch(function()
+    RunBatch(EVENT_OPERATION[event] or "Sources.OtherEvent", function()
         if event == "FRIENDLIST_UPDATE" then
             SyncFriends()
         elseif event == "GROUP_ROSTER_UPDATE" then

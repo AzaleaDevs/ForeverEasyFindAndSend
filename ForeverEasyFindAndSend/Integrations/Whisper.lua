@@ -66,10 +66,14 @@ local function ReleaseArrowKeys(editBox)
 end
 
 local function UpdateSuggestions(editBox)
+    local startedAt = ns.Performance and ns.Performance.Start()
     local query = GetRecipientQuery(editBox)
     if not query then
         ns.WhisperSuggestions.Hide(editBox, "recipient query ended")
         ReleaseArrowKeys(editBox)
+        if startedAt then
+            ns.Performance.Stop("Whisper.UpdateSuggestions", startedAt, { queryLength = 0, results = 0 })
+        end
         return
     end
 
@@ -79,6 +83,12 @@ local function UpdateSuggestions(editBox)
         CaptureArrowKeys(editBox)
     else
         ReleaseArrowKeys(editBox)
+    end
+    if startedAt then
+        ns.Performance.Stop("Whisper.UpdateSuggestions", startedAt, {
+            queryLength = string.len(query),
+            results = #results,
+        })
     end
 end
 

@@ -32,7 +32,7 @@ local function TryInstallWhisperFeatures()
     end
 end
 
-eventFrame:SetScript("OnEvent", function(_, event, ...)
+local function HandleEvent(_, event, ...)
     if event == "ADDON_LOADED" then
         local loadedAddonName = ...
         if loadedAddonName == addonName then
@@ -76,6 +76,15 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
     else
         ns.Sources.OnEvent(event, ...)
     end
+end
+
+eventFrame:SetScript("OnEvent", function(...)
+    local event = select(2, ...)
+    local startedAt = ns.Performance and ns.Performance.Start()
+    HandleEvent(...)
+    if startedAt then
+        ns.Performance.Stop("Event." .. tostring(event), startedAt)
+    end
 end)
 
 SLASH_FOREVEREASYFINDANDSEND1 = "/fefs"
@@ -93,8 +102,25 @@ SlashCmdList.FOREVEREASYFINDANDSEND = function(message)
         return
     end
 
-    if command == "debug" and string.lower(argument or "") == "perf" then
-        ns.Performance.Print()
+    local perfAction = string.match(string.lower(argument or ""), "^perf%s*(%S*)$")
+    if command == "debug" and perfAction then
+        if perfAction == "" then
+            ns.Performance.Print()
+        elseif perfAction == "on" then
+            if ns.Performance.SetEnabled(true) then
+                ns.Print(ns.L.PERF_ENABLED)
+            else
+                ns.Print(ns.L.PERF_UNAVAILABLE)
+            end
+        elseif perfAction == "off" then
+            ns.Performance.SetEnabled(false)
+            ns.Print(ns.L.PERF_DISABLED)
+        elseif perfAction == "reset" then
+            ns.Performance.Reset()
+            ns.Print(ns.L.PERF_RESET_DONE)
+        else
+            ns.Print(ns.L.PERF_COMMAND_HELP)
+        end
         return
     end
 

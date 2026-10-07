@@ -173,6 +173,11 @@ def test_localizations():
         "REMOVE_FAVORITE",
         "HIDE_CONTACTS",
         "SHOW_CONTACTS",
+        "PERF_ENABLED",
+        "PERF_DISABLED",
+        "PERF_RESET_DONE",
+        "PERF_OPERATION",
+        "PERF_SLOW_ENTRY",
         "CMD_STATUS",
     )
     for locale in ("enUS", "esES", "frFR", "deDE"):

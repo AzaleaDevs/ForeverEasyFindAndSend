@@ -149,6 +149,8 @@ function Who.OnEvent(event)
         return
     end
 
+    local startedAt = ns.Performance and ns.Performance.Start()
+
     pending = false
     requestGeneration = requestGeneration + 1
 
@@ -198,6 +200,14 @@ function Who.OnEvent(event)
 
     ns.Database.RequestRefresh(false)
     ns.Database.EndBatch()
+    if startedAt then
+        ns.Performance.Stop("WHO.Process", startedAt, {
+            results = numWhos,
+            reported = totalNumWhos,
+            imported = imported,
+            succeeded = succeeded,
+        })
+    end
 end
 
 function Who.PrintDebug()

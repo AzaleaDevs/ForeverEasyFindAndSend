@@ -44,6 +44,7 @@ end
 
 local function CreateCombinedSource(originalSource)
     return function(text, maxResults, cursorPosition, allowFullMatch, ...)
+        local startedAt = ns.Performance and ns.Performance.Start()
         local limit = type(maxResults) == "number" and maxResults or 6
         local combined = {}
         local seenNames = {}
@@ -64,6 +65,14 @@ local function CreateCombinedSource(originalSource)
             for resultIndex = 1, #nativeResults do
                 AppendUnique(combined, seenNames, nativeResults[resultIndex], limit)
             end
+        end
+
+        if startedAt then
+            ns.Performance.Stop("Mail.AutoComplete", startedAt, {
+                localResults = #localResults,
+                combined = #combined,
+                limit = limit,
+            })
         end
 
         return combined

@@ -30,6 +30,8 @@ local changeHandler
 local batchDepth = 0
 local batchDirty = false
 local batchSearchDirty = false
+local batchProfileStartedAt
+local batchProfileUpserts = 0
 
 local SEARCH_FIELDS = {
     "actionName",
@@ -188,8 +190,16 @@ function Database.Initialize()
 end
 
 function Database.Upsert(incoming)
+    local startedAt = ns.Performance and ns.Performance.Start()
     if type(incoming) ~= "table" or type(incoming.actionName) ~= "string" or incoming.actionName == "" then
+        if startedAt then
+            ns.Performance.Stop("Database.Upsert", startedAt)
+        end
         return nil, "actionName is required"
+    end
+
+    if startedAt and batchDepth > 0 then
+        batchProfileUpserts = batchProfileUpserts + 1
     end
 
     local character = FindExisting(incoming)
@@ -234,8 +244,12 @@ function Database.Upsert(incoming)
     end
     byActionName[character.actionName] = character
 
-    if created or SearchFieldsChanged(character, previous) then
+    local searchChanged = created or SearchFieldsChanged(character, previous)
+    if searchChanged then
         NotifyChanged(true)
+    end
+    if startedAt then
+        ns.Performance.Stop("Database.Upsert", startedAt)
     end
     return character, nil, created
 end
@@ -265,6 +279,10 @@ function Database.SetChangeHandler(handler)
 end
 
 function Database.BeginBatch()
+    if batchDepth == 0 then
+        batchProfileStartedAt = ns.Performance and ns.Performance.Start()
+        batchProfileUpserts = 0
+    end
     batchDepth = batchDepth + 1
 end
 
@@ -274,13 +292,25 @@ function Database.EndBatch()
     end
 
     batchDepth = batchDepth - 1
+    local notified = false
+    local searchChanged = false
     if batchDepth == 0 and batchDirty then
-        local searchChanged = batchSearchDirty
+        searchChanged = batchSearchDirty
         batchDirty = false
         batchSearchDirty = false
+        notified = true
         if changeHandler then
             changeHandler(searchChanged)
         end
+    end
+    if batchDepth == 0 and batchProfileStartedAt then
+        ns.Performance.Stop("Database.Batch", batchProfileStartedAt, {
+            upserts = batchProfileUpserts,
+            notified = notified,
+            searchChanged = searchChanged,
+        })
+        batchProfileStartedAt = nil
+        batchProfileUpserts = 0
     end
     return true
 end
