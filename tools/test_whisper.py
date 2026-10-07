@@ -40,10 +40,10 @@ lua.execute(
     function editBox:SetText(value) self.text = value end
     function editBox:UpdateHeader() self.headerUpdated = true end
     function editBox:SetFocus() self.focused = true end
-    function editBox:GetPropagateKeyboardInput() return self.propagateKeyboard ~= false end
-    function editBox:SetPropagateKeyboardInput(value) self.propagateKeyboard = value end
-    nativeKeyDownCalls = 0
-    editBox.scripts.OnKeyDown = function() nativeKeyDownCalls = nativeKeyDownCalls + 1 end
+    function editBox:GetAltArrowKeyMode() return self.altArrowKeyMode ~= false end
+    function editBox:SetAltArrowKeyMode(value) self.altArrowKeyMode = value end
+    nativeArrowCalls = 0
+    editBox.scripts.OnArrowPressed = function() nativeArrowCalls = nativeArrowCalls + 1 end
     chatFrame = { editBox = editBox }
     ChatFrame1 = chatFrame
     CHAT_FRAMES = { "ChatFrame1" }
@@ -59,7 +59,7 @@ search_state = {"query": None, "limit": None}
 def find(query, limit):
     search_state["query"] = query
     search_state["limit"] = limit
-    return lua.table_from([search_result])
+    return lua.table_from(search_state.get("results", [search_result]))
 
 
 popup_state = {"shown": False, "handler": None, "moves": [], "selected": 0}
@@ -70,7 +70,7 @@ def show(_edit_box, results):
     return popup_state["shown"]
 
 
-def hide(_edit_box=None):
+def hide(_edit_box=None, _reason=None):
     popup_state["shown"] = False
     return True
 
@@ -90,6 +90,8 @@ def select(_edit_box):
 
 
 ns.Search = lua.table_from({"Find": find})
+debug_messages = []
+ns.Print = lambda message: debug_messages.append(message)
 ns.WhisperSuggestions = lua.table_from(
     {
         "SetSelectionHandler": lambda handler: popup_state.__setitem__("handler", handler),
@@ -116,12 +118,19 @@ assert g.nativeHideCalls == 1
 assert g.editBox.autoCompleteSource()[1].name == "Native Player"
 assert g.editBox.customAutoCompleteFunction() is False
 
-g.editBox.scripts.OnKeyDown(g.editBox, "DOWN")
-assert g.editBox.propagateKeyboard is False
-g.editBox.scripts.OnKeyUp(g.editBox, "DOWN")
-assert g.editBox.propagateKeyboard is True
-g.editBox.scripts.OnKeyDown(g.editBox, "UP")
+assert g.editBox.altArrowKeyMode is False
+g.editBox.scripts.OnArrowPressed(g.editBox, "DOWN")
+g.editBox.scripts.OnArrowPressed(g.editBox, "UP")
 assert popup_state["moves"] == [1, -1]
+
+search_state["results"] = []
+g.editBox.hooks.OnTextChanged(g.editBox, True)
+assert not popup_state["shown"]
+assert g.editBox.altArrowKeyMode is True
+search_state["results"] = [search_result]
+g.editBox.hooks.OnTextChanged(g.editBox, True)
+assert popup_state["shown"]
+assert g.editBox.altArrowKeyMode is False
 g.editBox.scripts.OnTabPressed(g.editBox)
 g.editBox.scripts.OnEnterPressed(g.editBox)
 assert popup_state["selected"] == 2
@@ -140,13 +149,21 @@ assert popup_state["shown"]
 g.editBox.scripts.OnEscapePressed(g.editBox)
 assert not popup_state["shown"]
 assert g.editBox.text == "/w zoo"
+assert g.editBox.altArrowKeyMode is True
 
 g.editBox.text = "/party zoo"
 g.editBox.hooks.OnTextChanged(g.editBox, True)
 assert not popup_state["shown"]
-g.editBox.scripts.OnKeyDown(g.editBox, "DOWN")
-assert g.nativeKeyDownCalls == 1
-assert g.editBox.propagateKeyboard is True
+g.editBox.scripts.OnArrowPressed(g.editBox, "DOWN")
+assert g.nativeArrowCalls == 1
+assert g.editBox.altArrowKeyMode is True
+
+ns.Whisper.SetDebug(True)
+assert ns.Whisper.IsDebugEnabled()
+ns.Whisper.Debug("key %s", "DOWN")
+ns.Whisper.SetDebug(False)
+assert debug_messages[-2] == "WHISPER: key DOWN"
+assert debug_messages[-1] == "WHISPER debug disabled"
 
 print("whisper popup integration checks passed")
 
@@ -159,6 +176,12 @@ ui_lua.execute(
     CLASS_ICON_TCOORDS = { DRUID = { 0, 0.25, 0, 0.25 } }
     RAID_CLASS_COLORS = { DRUID = { r = 1, g = 0.5, b = 0 } }
     createdButtons = {}
+    EventRegistry = {}
+    function EventRegistry:RegisterCallback(event, callback, owner)
+        stickyEvent = event
+        stickyCallback = callback
+        stickyOwner = owner
+    end
     local function Region()
         return setmetatable({}, { __index = function() return function() end end })
     end
@@ -212,7 +235,15 @@ assert len(ui_lua.globals().createdButtons) == 5
 for row_index in range(1, 6):
     row = ui_lua.globals().createdButtons[row_index]
     assert row.mouseEnabled is True
-    assert row.registeredClicks[1] == "LeftButtonDown"
+    assert row.registeredClicks[1] == "LeftButtonUp"
+
+assert ui_lua.globals().stickyEvent == "UI.QueryStickyFocusFrames"
+sticky_request = ui_lua.table()
+sticky_request.AddFrame = ui_lua.eval("function(self, frame) self.frame = frame end")
+ui_lua.globals().stickyCallback(ui_lua.globals().stickyOwner, sticky_request)
+assert ui_lua.eval("function(a, b) return rawequal(a, b) end")(
+    sticky_request.frame, ui_lua.globals().FEFSWhisperSuggestions
+)
 
 ui_ns.WhisperSuggestions.MoveSelection(ui_lua.globals().popupEditBox, 1)
 ui_ns.WhisperSuggestions.MoveSelection(ui_lua.globals().popupEditBox, 1)
@@ -235,3 +266,33 @@ assert selected_records[-1].actionName == "Player 2"
 assert ui_ns.WhisperSuggestions.GetSelectedIndex() == 2
 
 print("whisper popup UI checks passed")
+
+# Verify the opt-in slash command enables diagnostics and the explicit off form disables them.
+core_lua = LuaRuntime(unpack_returned_tuples=True)
+core_lua.execute(
+    """
+    SlashCmdList = {}
+    function CreateFrame()
+        return {
+            RegisterEvent = function() end,
+            SetScript = function() end,
+        }
+    end
+    """
+)
+core_ns = core_lua.table()
+debug_state = {"enabled": None}
+core_ns.Whisper = core_lua.table_from(
+    {"SetDebug": lambda enabled: debug_state.__setitem__("enabled", enabled)}
+)
+core_lua.execute(
+    (root / "ForeverEasyFindAndSend/Core.lua").read_text(encoding="utf-8"),
+    "ForeverEasyFindAndSend",
+    core_ns,
+)
+core_lua.globals().SlashCmdList.FOREVEREASYFINDANDSEND("debug whisper")
+assert debug_state["enabled"] is True
+core_lua.globals().SlashCmdList.FOREVEREASYFINDANDSEND("debug whisper off")
+assert debug_state["enabled"] is False
+
+print("whisper debug command checks passed")

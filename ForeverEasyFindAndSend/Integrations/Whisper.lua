@@ -6,8 +6,9 @@ ns.Whisper = Whisper
 local MAX_RESULTS = 5
 local installed = false
 local installedEditBoxes = setmetatable({}, { __mode = "k" })
-local keyboardPropagation = setmetatable({}, { __mode = "k" })
+local arrowKeyModes = setmetatable({}, { __mode = "k" })
 local whisperCommands = {}
+local debugEnabled = false
 
 local function CacheWhisperCommands()
     wipe(whisperCommands)
@@ -49,36 +50,35 @@ local function HideNativeAutoComplete(editBox)
     end
 end
 
-local function CaptureArrowKey(editBox)
-    if keyboardPropagation[editBox] == nil then
-        if type(editBox.GetPropagateKeyboardInput) == "function" then
-            keyboardPropagation[editBox] = editBox:GetPropagateKeyboardInput()
-        else
-            keyboardPropagation[editBox] = true
-        end
+local function CaptureArrowKeys(editBox)
+    if arrowKeyModes[editBox] == nil then
+        arrowKeyModes[editBox] = editBox:GetAltArrowKeyMode()
+        editBox:SetAltArrowKeyMode(false)
     end
-    editBox:SetPropagateKeyboardInput(false)
 end
 
-local function ReleaseArrowKey(editBox)
-    local propagate = keyboardPropagation[editBox]
-    if propagate ~= nil then
-        editBox:SetPropagateKeyboardInput(propagate)
-        keyboardPropagation[editBox] = nil
+local function ReleaseArrowKeys(editBox)
+    local altArrowKeyMode = arrowKeyModes[editBox]
+    if altArrowKeyMode ~= nil then
+        editBox:SetAltArrowKeyMode(altArrowKeyMode)
+        arrowKeyModes[editBox] = nil
     end
 end
 
 local function UpdateSuggestions(editBox)
     local query = GetRecipientQuery(editBox)
     if not query then
-        ns.WhisperSuggestions.Hide(editBox)
-        ReleaseArrowKey(editBox)
+        ns.WhisperSuggestions.Hide(editBox, "recipient query ended")
+        ReleaseArrowKeys(editBox)
         return
     end
 
     local results = ns.Search.Find(query, MAX_RESULTS)
     if ns.WhisperSuggestions.Show(editBox, results) then
         HideNativeAutoComplete(editBox)
+        CaptureArrowKeys(editBox)
+    else
+        ReleaseArrowKeys(editBox)
     end
 end
 
@@ -88,8 +88,8 @@ local function SelectRecipient(editBox, record)
         return
     end
 
-    ns.WhisperSuggestions.Hide(editBox)
-    ReleaseArrowKey(editBox)
+    ns.WhisperSuggestions.Hide(editBox, "recipient selected")
+    ReleaseArrowKeys(editBox)
     HideNativeAutoComplete(editBox)
     editBox:SetTellTarget(actionName)
     editBox:SetChatType("WHISPER")
@@ -125,24 +125,20 @@ local function InstallEditBox(editBox)
         end
     end)
     editBox:HookScript("OnEditFocusLost", function(self)
-        ns.WhisperSuggestions.Hide(self)
-        ReleaseArrowKey(self)
+        Whisper.Debug("edit focus lost")
+        ns.WhisperSuggestions.Hide(self, "edit focus lost")
+        ReleaseArrowKeys(self)
     end)
     editBox:HookScript("OnHide", function(self)
-        ns.WhisperSuggestions.Hide(self)
-        ReleaseArrowKey(self)
+        Whisper.Debug("edit box hide")
+        ns.WhisperSuggestions.Hide(self, "edit box hide")
+        ReleaseArrowKeys(self)
     end)
 
-    WrapScript(editBox, "OnKeyDown", function(self, key)
+    WrapScript(editBox, "OnArrowPressed", function(self, key)
         if ns.WhisperSuggestions.IsShownFor(self) and (key == "UP" or key == "DOWN") then
-            CaptureArrowKey(self)
+            Whisper.Debug("key %s", key)
             return ns.WhisperSuggestions.MoveSelection(self, key == "UP" and -1 or 1)
-        end
-        return false
-    end)
-    WrapScript(editBox, "OnKeyUp", function(self, key)
-        if key == "UP" or key == "DOWN" then
-            ReleaseArrowKey(self)
         end
         return false
     end)
@@ -154,8 +150,8 @@ local function InstallEditBox(editBox)
     end)
     WrapScript(editBox, "OnEscapePressed", function(self)
         if ns.WhisperSuggestions.IsShownFor(self) then
-            ns.WhisperSuggestions.Hide(self)
-            ReleaseArrowKey(self)
+            ns.WhisperSuggestions.Hide(self, "escape")
+            ReleaseArrowKeys(self)
             HideNativeAutoComplete(self)
             return true
         end
@@ -196,8 +192,8 @@ function Whisper.TryInstall()
     hooksecurefunc(ChatFrameEditBoxMixin, "ProcessChatType", function(editBox, _, chatType)
         InstallEditBox(editBox)
         if chatType ~= "WHISPER" and chatType ~= "SMART_WHISPER" then
-            ns.WhisperSuggestions.Hide(editBox)
-            ReleaseArrowKey(editBox)
+            ns.WhisperSuggestions.Hide(editBox, "chat type changed")
+            ReleaseArrowKeys(editBox)
         end
     end)
     installed = true
@@ -206,4 +202,19 @@ end
 
 function Whisper.IsInstalled()
     return installed
+end
+
+function Whisper.SetDebug(enabled)
+    debugEnabled = enabled == true
+    ns.Print("WHISPER debug " .. (debugEnabled and "enabled" or "disabled"))
+end
+
+function Whisper.IsDebugEnabled()
+    return debugEnabled
+end
+
+function Whisper.Debug(formatString, ...)
+    if debugEnabled then
+        ns.Print("WHISPER: " .. string.format(formatString, ...))
+    end
 end

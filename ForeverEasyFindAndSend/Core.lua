@@ -98,6 +98,12 @@ SlashCmdList.FOREVEREASYFINDANDSEND = function(message)
         return
     end
 
+    local debugTarget, debugValue = string.match(string.lower(argument or ""), "^(%S+)%s*(%S*)$")
+    if command == "debug" and debugTarget == "whisper" and ns.Whisper then
+        ns.Whisper.SetDebug(debugValue ~= "off")
+        return
+    end
+
     if command == "debug" then
         ns.Sources.PrintDebug()
         if ns.Who then

@@ -15,8 +15,12 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Make whisper suggestion rows select on mouse-down before chat focus loss hides the popup.
-- Capture Up/Down only while the FEFS whisper popup is visible and restore normal keyboard propagation immediately afterward.
+- Register the FEFS whisper popup with Forever's sticky-focus query so row clicks complete before chat focus is cleared.
+- Use Forever's native alternate-arrow mode while the FEFS whisper popup is visible, restoring normal movement as soon as it closes.
+
+### Added
+
+- Add opt-in `/fefs debug whisper` input tracing, disabled again with `/fefs debug whisper off`.
 
 ## [0.1.0-alpha.4] - 2026-10-05
 

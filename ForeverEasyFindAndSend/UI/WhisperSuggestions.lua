@@ -15,6 +15,12 @@ local selectedIndex = 1
 local activeEditBox
 local selectionHandler
 
+local function Debug(formatString, ...)
+    if ns.Whisper and type(ns.Whisper.Debug) == "function" then
+        ns.Whisper.Debug(formatString, ...)
+    end
+end
+
 local function SetClassIcon(row, record)
     local coordinates = record.classFile and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[record.classFile]
     if coordinates then
@@ -57,7 +63,7 @@ local function CreateRow(rowIndex)
     row:SetSize(PANEL_WIDTH - (PANEL_PADDING * 2), ROW_HEIGHT)
     row:SetPoint("TOPLEFT", PANEL_PADDING, -PANEL_PADDING - ((rowIndex - 1) * ROW_HEIGHT))
     row:EnableMouse(true)
-    row:RegisterForClicks("LeftButtonDown")
+    row:RegisterForClicks("LeftButtonUp")
 
     row.selection = row:CreateTexture(nil, "BACKGROUND")
     row.selection:SetAllPoints()
@@ -80,9 +86,17 @@ local function CreateRow(rowIndex)
     row.metadata:SetTextColor(0.7, 0.7, 0.7)
 
     row:SetScript("OnEnter", function()
+        Debug("row OnEnter %d", rowIndex)
         WhisperSuggestions.SetSelectedIndex(activeEditBox, rowIndex)
     end)
-    row:SetScript("OnClick", function()
+    row:SetScript("OnMouseDown", function(_, button)
+        Debug("row OnMouseDown %d %s", rowIndex, tostring(button))
+    end)
+    row:SetScript("OnMouseUp", function(_, button)
+        Debug("row OnMouseUp %d %s", rowIndex, tostring(button))
+    end)
+    row:SetScript("OnClick", function(_, button)
+        Debug("row OnClick %d %s", rowIndex, tostring(button))
         WhisperSuggestions.SelectIndex(activeEditBox, rowIndex)
     end)
     rows[rowIndex] = row
@@ -101,6 +115,11 @@ local function CreatePanel()
         edgeSize = 16,
         insets = { left = 4, right = 4, top = 4, bottom = 4 },
     })
+    if EventRegistry and type(EventRegistry.RegisterCallback) == "function" then
+        EventRegistry:RegisterCallback("UI.QueryStickyFocusFrames", function(owner, request)
+            request:AddFrame(owner)
+        end, panel)
+    end
     panel:Hide()
 
     for rowIndex = 1, MAX_RESULTS do
@@ -134,7 +153,7 @@ function WhisperSuggestions.Show(editBox, searchResults)
     wipe(results)
     local resultCount = math.min(type(searchResults) == "table" and #searchResults or 0, MAX_RESULTS)
     if not editBox or resultCount == 0 then
-        WhisperSuggestions.Hide(editBox)
+        WhisperSuggestions.Hide(editBox, "no results")
         return false
     end
 
@@ -160,14 +179,16 @@ function WhisperSuggestions.Show(editBox, searchResults)
 
     AnchorToEditBox(editBox, resultCount)
     panel:Show()
+    Debug("popup show %d", resultCount)
     UpdateHighlights()
     return true
 end
 
-function WhisperSuggestions.Hide(editBox)
+function WhisperSuggestions.Hide(editBox, reason)
     if not panel or (editBox and activeEditBox ~= editBox) then
         return false
     end
+    Debug("popup hide %s", tostring(reason or "unspecified"))
     panel:Hide()
     activeEditBox = nil
     wipe(results)
