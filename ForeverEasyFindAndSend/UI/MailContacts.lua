@@ -8,6 +8,9 @@ local PANEL_HEIGHT = 420
 local ROW_HEIGHT = 52
 local VISIBLE_ROWS = 6
 local SEARCH_DEBOUNCE_SECONDS = 0.075
+local CONTENT_LEFT = 18
+local CONTENT_RIGHT = 370
+local CONTENT_WIDTH = CONTENT_RIGHT - CONTENT_LEFT
 
 local installed = false
 local activeTab = "GENERAL"
@@ -26,6 +29,12 @@ local resultsDirty = true
 local lastQuery
 local lastTab
 local lastRenderedOffset
+
+local function ShowTooltip(owner, text, anchor)
+    GameTooltip:SetOwner(owner, anchor or "ANCHOR_RIGHT")
+    GameTooltip:SetText(text)
+    GameTooltip:Show()
+end
 
 local function SetRecipient(record)
     local editBox = _G.SendMailNameEditBox
@@ -157,7 +166,7 @@ end
 
 local function CreateRow(index)
     local row = CreateFrame("Button", nil, panel)
-    row:SetSize(258, ROW_HEIGHT - 2)
+    row:SetSize(CONTENT_WIDTH - 12, ROW_HEIGHT - 2)
     row:SetPoint("TOPLEFT", scrollFrame, "TOPLEFT", 2, -((index - 1) * ROW_HEIGHT))
 
     row.highlight = row:CreateTexture(nil, "BACKGROUND")
@@ -171,12 +180,12 @@ local function CreateRow(index)
 
     row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     row.name:SetPoint("TOPLEFT", row.classIcon, "TOPRIGHT", 7, -6)
-    row.name:SetWidth(155)
+    row.name:SetWidth(230)
     row.name:SetJustifyH("LEFT")
 
     row.metadata = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row.metadata:SetPoint("TOPLEFT", row.name, "BOTTOMLEFT", 0, -4)
-    row.metadata:SetWidth(155)
+    row.metadata:SetWidth(230)
     row.metadata:SetJustifyH("LEFT")
     row.metadata:SetTextColor(0.7, 0.7, 0.7)
 
@@ -191,9 +200,7 @@ local function CreateRow(index)
         end
     end)
     row.mailButton:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText(ns.L.SET_MAIL_RECIPIENT)
-        GameTooltip:Show()
+        ShowTooltip(self, ns.L.SET_MAIL_RECIPIENT)
     end)
     row.mailButton:SetScript("OnLeave", GameTooltip_Hide)
 
@@ -210,9 +217,7 @@ local function CreateRow(index)
         end
     end)
     row.favoriteButton:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText(row.record and row.record.favorite and ns.L.REMOVE_FAVORITE or ns.L.ADD_FAVORITE)
-        GameTooltip:Show()
+        ShowTooltip(self, row.record and row.record.favorite and ns.L.REMOVE_FAVORITE or ns.L.ADD_FAVORITE)
     end)
     row.favoriteButton:SetScript("OnLeave", GameTooltip_Hide)
 
@@ -250,15 +255,15 @@ local function SetActiveTab(tab)
     ResetScroll()
 
     for tabName, button in pairs(panel.tabButtons) do
-        button:SetEnabled(tabName ~= activeTab)
+        button:SetChecked(tabName == activeTab)
     end
 
     if activeTab == "GENERAL" then
-        searchBox:SetWidth(158)
+        searchBox:SetWidth(224)
         onlineSearchButton:Show()
         whoStatusText:Show()
     else
-        searchBox:SetWidth(270)
+        searchBox:SetWidth(CONTENT_WIDTH)
         onlineSearchButton:Hide()
         whoStatusText:Hide()
     end
@@ -267,16 +272,20 @@ local function SetActiveTab(tab)
     MailContacts.Refresh("tab")
 end
 
+local function UpdateCollapseButton(collapsed)
+    toggleButton.icon:SetAtlas(collapsed and "common-icon-forwardarrow" or "common-icon-backarrow", false)
+end
+
 local function SetCollapsed(collapsed)
     local settings = ns.Database.GetSettings()
     settings.panelCollapsed = collapsed == true
 
     if settings.panelCollapsed then
         panel:Hide()
-        toggleButton:SetText(">")
+        UpdateCollapseButton(true)
     elseif SendMailFrame:IsShown() then
         panel:Show()
-        toggleButton:SetText("<")
+        UpdateCollapseButton(false)
         MailContacts.Refresh("show")
     end
 end
@@ -301,9 +310,9 @@ local function CreatePanel()
     title:SetPoint("TOP", 0, -14)
     title:SetText(ns.L.CONTACTS_TITLE)
 
-    searchBox = CreateFrame("EditBox", nil, panel, "SearchBoxTemplate")
-    searchBox:SetSize(270, 24)
-    searchBox:SetPoint("TOPLEFT", 98, -40)
+    searchBox = CreateFrame("EditBox", nil, panel, "SearchBoxNineSliceTemplate")
+    searchBox:SetSize(CONTENT_WIDTH, 24)
+    searchBox:SetPoint("TOPLEFT", CONTENT_LEFT, -40)
     if searchBox.Instructions then
         searchBox.Instructions:SetText(ns.L.SEARCH_PLACEHOLDER)
     end
@@ -316,8 +325,8 @@ local function CreatePanel()
     end)
 
     onlineSearchButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    onlineSearchButton:SetSize(106, 24)
-    onlineSearchButton:SetPoint("TOPLEFT", 262, -40)
+    onlineSearchButton:SetSize(118, 24)
+    onlineSearchButton:SetPoint("TOPLEFT", 252, -40)
     onlineSearchButton:SetText(ns.L.SEARCH_ONLINE)
     onlineSearchButton:SetScript("OnClick", function()
         if ns.Who then
@@ -326,24 +335,46 @@ local function CreatePanel()
     end)
 
     whoStatusText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    whoStatusText:SetPoint("TOPLEFT", 98, -68)
-    whoStatusText:SetWidth(270)
+    whoStatusText:SetPoint("TOPLEFT", CONTENT_LEFT, -68)
+    whoStatusText:SetWidth(CONTENT_WIDTH)
     whoStatusText:SetJustifyH("LEFT")
     whoStatusText:SetTextColor(0.7, 0.7, 0.7)
 
     panel.tabButtons = {}
     local tabs = {
-        { key = "GENERAL", label = ns.L.TAB_GENERAL },
-        { key = "GUILD", label = ns.L.TAB_GUILD },
-        { key = "FAVORITES", label = ns.L.TAB_FAVORITES },
+        {
+            key = "GENERAL",
+            tooltip = ns.L.TAB_GENERAL,
+            activeAtlas = "friends-icon-tab-friends",
+            inactiveAtlas = "friends-icon-tab-friends-inactive",
+        },
+        {
+            key = "GUILD",
+            tooltip = ns.L.TAB_GUILD,
+            iconTexture = "Interface/GuildFrame/GuildLogo-NoLogoSm",
+        },
+        {
+            key = "FAVORITES",
+            tooltip = ns.L.TAB_FAVORITES,
+            activeAtlas = "friends-icon-favorites",
+            inactiveAtlas = "friends-icon-favorites-dis",
+        },
     }
     for tabIndex = 1, #tabs do
         local tab = tabs[tabIndex]
         local tabKey = tab.key
-        local button = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-        button:SetSize(84, 28)
-        button:SetPoint("TOPLEFT", 10, -40 - ((tabIndex - 1) * 32))
-        button:SetText(tab.label)
+        local button = CreateFrame("Button", nil, panel, "LargeSideTabButtonTemplate")
+        button:SetFrameLevel(panel:GetFrameLevel() + 2)
+        button:SetPoint("TOPLEFT", panel, "TOPRIGHT", 0, -52 - ((tabIndex - 1) * 49))
+        button.tooltipText = tab.tooltip
+        button.activeAtlas = tab.activeAtlas
+        button.inactiveAtlas = tab.inactiveAtlas
+        if tab.iconTexture then
+            button.Icon:SetTexture(tab.iconTexture)
+            button.Icon:SetTexCoord(0, 1, 0, 1)
+            button.Icon:SetSize(30, 30)
+        end
+        button:SetChecked(false)
         button:SetScript("OnClick", function()
             SetActiveTab(tabKey)
         end)
@@ -351,8 +382,8 @@ local function CreatePanel()
     end
 
     scrollFrame = CreateFrame("ScrollFrame", "FEFSContactScrollFrame", panel, "FauxScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", 98, -91)
-    scrollFrame:SetSize(262, VISIBLE_ROWS * ROW_HEIGHT)
+    scrollFrame:SetPoint("TOPLEFT", CONTENT_LEFT, -91)
+    scrollFrame:SetSize(CONTENT_WIDTH - 8, VISIBLE_ROWS * ROW_HEIGHT)
     scrollFrame:SetScript("OnVerticalScroll", function(self, offset)
         FauxScrollFrame_OnVerticalScroll(self, offset, ROW_HEIGHT, function()
             MailContacts.Refresh("scroll")
@@ -369,12 +400,23 @@ local function CreatePanel()
         CreateRow(rowIndex)
     end
 
-    toggleButton = CreateFrame("Button", "FEFSMailContactsToggle", MailFrame, "UIPanelButtonTemplate")
-    toggleButton:SetSize(28, 44)
-    toggleButton:SetPoint("TOPLEFT", SendMailFrame, "TOPRIGHT", 3, -8)
+    toggleButton = CreateFrame("Button", "FEFSMailContactsToggle", MailFrame)
+    toggleButton:SetSize(28, 36)
+    toggleButton:SetPoint("TOPLEFT", SendMailFrame, "TOPRIGHT", 3, -10)
+    toggleButton:SetNormalAtlas("common-button-tertiary-square-normal")
+    toggleButton:SetPushedAtlas("common-button-tertiary-square-pressed")
+    toggleButton:SetHighlightAtlas("common-button-tertiary-square-normal", "ADD")
+    toggleButton.icon = toggleButton:CreateTexture(nil, "ARTWORK")
+    toggleButton.icon:SetSize(10, 16)
+    toggleButton.icon:SetPoint("CENTER")
     toggleButton:SetScript("OnClick", function()
         SetCollapsed(not ns.Database.GetSettings().panelCollapsed)
     end)
+    toggleButton:SetScript("OnEnter", function(self)
+        local collapsed = ns.Database.GetSettings().panelCollapsed == true
+        ShowTooltip(self, collapsed and ns.L.SHOW_CONTACTS or ns.L.HIDE_CONTACTS, "ANCHOR_LEFT")
+    end)
+    toggleButton:SetScript("OnLeave", GameTooltip_Hide)
 
     SendMailFrame:HookScript("OnShow", function()
         toggleButton:Show()

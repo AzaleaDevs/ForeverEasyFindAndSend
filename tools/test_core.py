@@ -171,6 +171,8 @@ def test_localizations():
         "SET_MAIL_RECIPIENT",
         "ADD_FAVORITE",
         "REMOVE_FAVORITE",
+        "HIDE_CONTACTS",
+        "SHOW_CONTACTS",
         "CMD_STATUS",
     )
     for locale in ("enUS", "esES", "frFR", "deDE"):
