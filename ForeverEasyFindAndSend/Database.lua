@@ -5,47 +5,6 @@ ns.Database = Database
 
 local CURRENT_SCHEMA_VERSION = 2
 
--- Development-only records. They participate in autocomplete tests but are
--- never inserted into ForeverEasyFindAndSendDB.
-local DEVELOPMENT_FIXTURES = {
-    {
-        actionName = "Amigo Kebab",
-        displayName = "Amigo Kebab",
-        firstName = "Amigo",
-        surname = "Kebab",
-        level = 60,
-        race = "Orc",
-        class = "SHAMAN",
-        classFile = "SHAMAN",
-        classID = 7,
-        isDevelopmentFixture = true,
-    },
-    {
-        actionName = "Amigö Kebäck",
-        displayName = "Amigö Kebäck",
-        firstName = "Amigö",
-        surname = "Kebäck",
-        level = 47,
-        race = "Human",
-        class = "MAGE",
-        classFile = "MAGE",
-        classID = 8,
-        isDevelopmentFixture = true,
-    },
-    {
-        actionName = "Âmïgø Këbäck",
-        displayName = "Âmïgø Këbäck",
-        firstName = "Âmïgø",
-        surname = "Këbäck",
-        level = 60,
-        race = "Troll",
-        class = "WARRIOR",
-        classFile = "WARRIOR",
-        classID = 1,
-        isDevelopmentFixture = true,
-    },
-}
-
 local KNOWN_FIELDS = {
     "actionName",
     "displayName",
@@ -282,7 +241,7 @@ function Database.Upsert(incoming)
 end
 
 function Database.SetFavorite(character, favorite)
-    if type(character) ~= "table" or character.isDevelopmentFixture then
+    if type(character) ~= "table" then
         return false
     end
 
@@ -341,13 +300,7 @@ function Database.GetPersistentRecords()
 end
 
 function Database.GetSearchRecords()
-    local records = Database.GetPersistentRecords()
-
-    for index = 1, #DEVELOPMENT_FIXTURES do
-        records[#records + 1] = DEVELOPMENT_FIXTURES[index]
-    end
-
-    return records
+    return Database.GetPersistentRecords()
 end
 
 function Database.GetFavoriteRecords()

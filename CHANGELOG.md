@@ -6,41 +6,30 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-
-- Use the compact `GUILD` tab label in every supported locale.
-- Reduce search-index rebuild work with single-pass UTF-8 folding, refresh-local normalization reuse, and cached localized class names.
-- Separate contacts dataset/render metrics and skip repeated scroll callbacks that remain on the same logical row.
-- Replace whisper-result injection with a compact FEFS suggestion popup that leaves Forever's native autocomplete intact.
-
-### Fixed
-
-- Register the FEFS whisper popup with Forever's sticky-focus query so row clicks complete before chat focus is cleared.
-- Use Forever's native alternate-arrow mode while the FEFS whisper popup is visible, restoring normal movement as soon as it closes.
+## [0.1.0-alpha.4] - 2026-10-07
 
 ### Added
 
-- Add opt-in `/fefs debug whisper` input tracing, disabled again with `/fefs debug whisper off`.
-
-## [0.1.0-alpha.4] - 2026-10-05
-
-### Added
-
-- English, Spanish, French, and German localization selected exclusively through `GetLocale()`, with English fallback.
-- Native-dropdown FEFS autocomplete for `WHISPER` and `SMART_WHISPER`, preserving exact `actionName` selection and all native results.
-- `/fefs debug perf` metrics for guild events/synchronizations, search refresh/find/filter work, and visible contacts refreshes.
-- Runtime class-name localization through client-provided class APIs and tables.
+- Collapsible mail agenda with General, Guild, and Favorites tabs.
+- Persistent favorites and filtering by known name, surname, race, class, and level metadata.
+- Exact-recipient mail autocomplete integrated with Forever's native suggestions.
+- Dedicated FEFS `/w` suggestion popup with metadata, class colors and icons, mouse selection, Up/Down wrap navigation, Tab, Enter, and Escape.
+- English, Spanish, French, and German localization with English fallback.
+- Addon icon and localized class presentation using client-provided resources.
+- Opt-in synchronization, performance, and whisper input diagnostics.
 
 ### Changed
 
-- Coalesce bursts of `GUILD_ROSTER_UPDATE` for 250 ms and skip guild `Upsert` calls when a member snapshot is unchanged.
-- Avoid filtering and sorting the contacts directory while its panel is hidden.
-- Include the client's localized class name in the in-memory search representation.
+- Significantly reduce search-index, guild synchronization, hidden-panel filtering, and repeated row-rendering work for large directories.
+- Keep all character data in the local account-wide SavedVariables directory; online discovery remains an explicit user action.
 
 ### Fixed
 
-- Removed the hardcoded `FEFS Contacts` title and localized all FEFS-owned player-facing strings.
-- Prevented source events from doing hidden mail-panel filtering work.
+- Preserve exact `actionName` values when selecting mail and whisper recipients.
+- Keep the typed query intact until an explicit selection and never send mail or whisper messages automatically.
+- Preserve chat focus for mouse selection and use Forever's native arrow-key lifecycle only while the whisper popup is visible.
+- Correct localization, contacts refresh, deduplication, and general integration edge cases found during Alpha testing.
+- Remove development-only recipient fixtures from the distributable addon.
 
 ## [0.1.0-alpha.3.1] - 2026-10-04
 

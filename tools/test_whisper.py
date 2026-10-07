@@ -109,6 +109,7 @@ lua.execute(
     ns,
 )
 assert ns.Whisper.TryInstall()
+assert not ns.Whisper.IsDebugEnabled()
 
 g = lua.globals()
 g.editBox.hooks.OnTextChanged(g.editBox, True)
